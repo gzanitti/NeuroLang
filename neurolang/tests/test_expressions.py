@@ -264,6 +264,7 @@ def test_nested_universals():
 
 def test_constant_unknown():
 
-    x = C_(Unknown)
+    a = S_('a')
+    x = C_[Unknown](a)
 
     assert x.type is Unknown
