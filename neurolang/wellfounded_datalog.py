@@ -32,8 +32,10 @@ class WellFoundedDatalog():
         model of P).
     '''
 
-    overestimate_negative = {}
-    overestimate_positive = {}
+    _converged_positive = {}
+    _overestimation_positive = {}
+    _converged_negative = {}
+    _overestimation_negative = {}
 
     def _deny_fact(self, expression: Expression) -> None:
         '''
@@ -51,23 +53,85 @@ class WellFoundedDatalog():
 
         '''
         for symbol in expression._symbols:
-            self.overestimate_negative[symbol.name] = invert(symbol)
+            self._overestimation_negative[symbol.name] = invert(symbol)
 
-    def solve(self, datalog_program):
+    def solve(self, eb: ExpressionBlock, datalog_program) -> tuple:
+        '''
+        Given an Expression Block and a Datalog Program, this function calculate the Well-Founded Semantics
+        using the WellFoundedEvaluator and iterating between the overestime of the positive and negative facts
+        until converge
 
-        
+        Parameters
+        ----------
+        datalog_program
+            A datalog program.
+        eb
+            The expression block of the Datalog program
+            
+
+        Returns
+        -------
+        result
+            A tuple of symbols
+        '''
+
         for v in datalog_program.intensional_database().values():
             for rule in v.expressions:
                 self._deny_fact(rule)
 
-        wfEval = WellFoundedEvaluator(self.overestimate_negative)
-        res = wfEval.walk(datalog_program)
+        not_converged = True
 
-        print(res)
+        while (not_converged):
+
+            self._converged_positive = self._overestimation_positive.copy()
+
+            wfEval = WellFoundedEvaluator(self._overestimation_negative)
+            evaluated = wfEval.walk(eb)
+            self._converged_negative = self._overestimation_negative.copy()
+
+            self._overestimation_positive = {}
+            for elem in evaluated:
+                if hasattr(elem.functor, 'value') and elem.functor.value == invert:
+                    name = elem.args[0].functor.name
+                    self._overestimation_positive[name] = elem
+                else:    
+                    self._overestimation_positive[elem.functor.name] = elem
+
+            wfEval = WellFoundedEvaluator(self._overestimation_positive)
+            evaluated = wfEval.walk(eb)
+
+            self._overestimation_negative = {}
+            for elem in evaluated:
+                if hasattr(elem.functor, 'value') and elem.functor.value == invert:
+                    name = elem.args[0].functor.name
+                    self._overestimation_negative[name] = elem
+                else:    
+                    self._overestimation_negative[elem.functor.name] = elem
+
+            not_converged = (self._converged_positive != self._overestimation_positive
+            or self._converged_negative != self._overestimation_negative)
+
+        result = ()
+        for k, v in self._converged_negative:
+            if self._converged_positive[k] == v:
+                result += (v,) 
+        
+        return result
 
 
 class WellFoundedEvaluator(PatternWalker):
+    '''
+        This solver implement de iteration step of the fixed resolution to 
+        solve a Well-Founded semantic. It receives a list of symbols 
+        (It can include inverted symbols) and walks for every implication 
+        evaluating them. It return a tuple of symbols and inverted symbols 
+        depends on the result of this evaluations.
 
+        Parameters
+        ----------
+        new_symbols
+            The list of symbols.
+        '''
 
     def __init__(self, new_symbols):
         self._new_symbols = new_symbols
@@ -108,16 +172,14 @@ class WellFoundedEvaluator(PatternWalker):
 
     @add_match(FunctionApplication(Expression, ...))
     def eval_function_application(self, expression):
-        if hasattr(expression.functor, 'value') and expression.functor.value == invert:
-            if expression.args[0].functor.name in self._new_symbols:
+        f_name = expression.functor.name
+        if f_name in self._new_symbols:
+            if hasattr(self._new_symbols[f_name].functor, 'value') and self._new_symbols[f_name].functor.value == invert:
                 return 0
             else:
-                return 1/2
-        else:
-            if expression.functor.name in self._new_symbols:
                 return 1
-            else:
-                return 1/2
+        else:
+            return 1/2
 
     
     @add_match(Symbol)
@@ -132,9 +194,12 @@ class WellFoundedEvaluator(PatternWalker):
             return 1/2
 
 
-    @add_match(Constant[bool])
+    @add_match(Constant)
     def eval_constant(self, expression):
-        return int(expression.value)
+        if expression.type == bool:
+            return int(expression.value)
+        else:
+            return 1/2
 
 
     @add_match(ExpressionBlock)
@@ -144,59 +209,3 @@ class WellFoundedEvaluator(PatternWalker):
             new_exps += self.walk(exp)
 
         return new_exps
-
-class WellFoundedRewriter(PatternWalker):
-
-
-    def __init__(self, new_symbols):
-        self._new_symbols = new_symbols
-
-
-    @add_match(Symbol)
-    def rewrite_symbol(self, expression):
-        return self._new_symbols[expression.name]
-
-
-    @add_match(FunctionApplication(Expression, ...))
-    def rewrite_function_application(self, expression):
-        functor = expression.functor
-        if functor in self._new_symbols and hasattr(self._new_symbols[functor.name], 'functor'):
-            return invert(
-                FunctionApplication(functor, expression.args)
-            )
-        else:
-            return FunctionApplication(functor, expression.args)
-
-
-    @add_match(FunctionApplication(Constant(and_), ...))
-    def rewrite_function_application_and(self, expression):
-        new_args = ()
-        for arg in expression.args:
-            new_args += (self.walk(arg),)
-
-        return FunctionApplication(Constant(or_), new_args)
-
-
-    @add_match(FunctionApplication(Constant(or_), ...))
-    def rewrite_function_application_or(self, expression):
-        new_args = ()
-        for arg in expression.args:
-            new_args += (self.walk(arg),)
-
-        return FunctionApplication(Constant(and_), new_args)
-
-
-    @add_match(Implication)
-    def rewrite_implication(self, expression):
-        new_antecedent = self.walk(expression.antecedent)
-
-        return Implication(expression.consequent, new_antecedent)
-
-
-    @add_match(ExpressionBlock)
-    def rewrite_expression_block(self, expression):
-        new_exps = ()
-        for exp in expression.expressions:
-            new_exps += self.walk(exp)
-
-        return ExpressionBlock(new_exps)

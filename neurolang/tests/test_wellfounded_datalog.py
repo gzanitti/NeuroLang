@@ -16,7 +16,7 @@ from ..wellfounded_datalog import (
     WellFoundedDatalog
 )
 from ..solver_datalog_naive import (
-    SolverNonRecursiveDatalogNaive, DatalogBasic, Implication,
+    SolverNonRecursiveDatalogNaive, DatalogBasic, Implication, Fact
 )
 
 from ..existential_datalog import (
@@ -293,19 +293,19 @@ def test_implication_eval():
 def test_wellfounded_datalog():
 
     true = C_(True)
-    unknown = C_(Unknown)
+    unknown = C_[Unknown]('unk')
+
     p = S_('p')
     q = S_('q')
     s = S_('s')
     t = S_('t')
     u = S_('u')
 
-
-    pitrue = Implication(p, true)
-    qitp = Implication(q, and_(true, p))
-    qiunk = Implication(q, unknown)
-    tiqunk = Implication(t, and_(q, unknown))
-    uiunkps = Implication(u, and_(and_(unknown, p), s))
+    pitrue = Implication(p(), true)
+    qitp = Implication(q(), and_(true, p()))
+    qiunk = Implication(q(), unknown)
+    tiqunk = Implication(t(), and_(q(), unknown))
+    uiunkps = Implication(u(), and_(and_(unknown, p()), s()))
 
     class Datalog(
         sdb.SolverNonRecursiveDatalogNaive,
@@ -319,9 +319,9 @@ def test_wellfounded_datalog():
         pitrue, qitp, qiunk, tiqunk, uiunkps
     ))
 
-    wp = dl.walk(program)
-    print(wp)
-
-
+    print(dl)
+    eb = dl.walk(program)
     
-
+    wfDatalog = WellFoundedDatalog()
+    wfDatalog.solve(eb, dl)
+    
