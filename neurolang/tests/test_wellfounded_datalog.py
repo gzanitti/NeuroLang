@@ -7,12 +7,13 @@ from .. import expression_walker
 from .. import expressions
 from ..expressions import (
     ExpressionBlock, Query, Lambda, FunctionApplication,
+    is_leq_informative,
 )
 
 from ..type_system import Unknown, _Unknown
 
 from ..wellfounded_datalog import (
-    WellFoundedRewriter, WellFoundedEvaluator,
+    WellFoundedEvaluator,
     WellFoundedDatalog
 )
 from ..solver_datalog_naive import (
@@ -319,9 +320,10 @@ def test_wellfounded_datalog():
         pitrue, qitp, qiunk, tiqunk, uiunkps
     ))
 
-    print(dl)
     eb = dl.walk(program)
     
     wfDatalog = WellFoundedDatalog()
-    wfDatalog.solve(eb, dl)
+    result = wfDatalog.solve(eb, dl)
+
+    assert result == (p(), q(),)
     
