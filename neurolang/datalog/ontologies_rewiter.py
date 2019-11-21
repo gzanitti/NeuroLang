@@ -33,25 +33,32 @@ class Rewriter():
         i = 0
         Q_rew = set({})
         for q in self.dl.expressions:
-            Q_rew.add(q)
+            Q_rew.add((q, 'r', 'u'))
         Q_temp = set({})
         while Q_rew != Q_temp:
             Q_temp = Q_rew
             for q in Q_temp:
+                if q[2] == 'e':
+                    continue
+                q0 = q[0]
                 for sigma in self.owl.expressions:
                     # rewriting step
-                    body_q = self._get_body(q)
+                    body_q = self._get_body(q0)
                     S_applicable = self._get_applicable(sigma, body_q)
                     for S in S_applicable:
                         i += 1
                         sigma_i = self._rename(sigma, i)
                         qS = most_general_unifier(S, sigma_i.consequent)
-                        if qS[1] not in Q_temp:
-                            Q_temp.remove(q)
-                            Q_temp.add(qS[1])
+                        if (qS[1], 'r', 'u') not in Q_temp and (qS[1], 'r', 'e') not in Q_temp:
+                            #Q_rew.remove(q)
+                            Q_rew.add((qS[1], 'r', 'u'))
 
                     # factorization step
-
+                    for S in self._get_body(q0):
+                        a = 1
+                        #code here
+            Q_rew.remove(q)
+            Q_rew.add((q[0], q[1], 'e'))
 
 
     def _get_body(self, q):
