@@ -27,10 +27,10 @@ def test_rewriting_step():
     db = C_('db')
 
     sigma = RI_(project(x) & inArea(x, y), EP_(z, hasCollaborator(z, y, x)))
-    q = I_(p(b), hasCollaborator(a, db, b) & project(b))
+    q = I_(p(b), hasCollaborator(a, db, b))
 
     qB = EB_((q,))
     sigmaB = EB_((sigma,))
 
     orw = Rewriter(qB, sigmaB)
-    orw.Xrewrite()
+    rewrite = orw.Xrewrite()

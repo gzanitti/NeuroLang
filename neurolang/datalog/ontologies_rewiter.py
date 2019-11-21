@@ -32,14 +32,14 @@ class Rewriter():
         ACM Transactions on Database Systems, vol. 39, May 2014.'''
         i = 0
         Q_rew = set({})
-        for q in self.dl.expressions:
-            Q_rew.add((q, 'r', 'u'))
+        for t in self.dl.expressions:
+            Q_rew.add((t, 'r', 'u'))
         Q_temp = set({})
         while Q_rew != Q_temp:
-            Q_temp = Q_rew
+            Q_temp = Q_rew.copy()
             for q in Q_temp:
                 if q[2] == 'e':
-                    continue
+                    break
                 q0 = q[0]
                 for sigma in self.owl.expressions:
                     # rewriting step
@@ -49,16 +49,27 @@ class Rewriter():
                         i += 1
                         sigma_i = self._rename(sigma, i)
                         qS = most_general_unifier(S, sigma_i.consequent)
-                        if (qS[1], 'r', 'u') not in Q_temp and (qS[1], 'r', 'e') not in Q_temp:
-                            #Q_rew.remove(q)
-                            Q_rew.add((qS[1], 'r', 'u'))
+                        # Maybe, I should improve this function
+                        new_q0 = self._recombine(q0, S, qS[1])
+                        if (new_q0, 'r', 'u') not in Q_temp and (new_q0, 'r', 'e') not in Q_temp:
+                            Q_rew.add((new_q0, 'r', 'u'))
 
                     # factorization step
-                    for S in self._get_body(q0):
-                        a = 1
-                        #code here
-            Q_rew.remove(q)
-            Q_rew.add((q[0], q[1], 'e'))
+                    body_q = self._get_body(q0)
+                    S_factorizable = self._get_factorizable(sigma, body_q)
+                    for S in S_factorizable:
+                        new_q0 = most_general_unifier(S, body_q)
+                        if (
+                            new_q0 is not None and
+                            (new_q0, 'r', 'u') not in Q_temp and (new_q0, 'r', 'e') not in Q_temp and
+                            (new_q0, 'f', 'u') not in Q_temp and (new_q0, 'f', 'e') not in Q_temp
+                        ):
+                            Q_rew.add((new_q0, 'f', 'u'))
+                Q_rew.remove(q)
+                Q_rew.add((q[0], q[1], 'e'))
+
+
+        return {x for x in Q_rew if x[2] == 'e'}
 
 
     def _get_body(self, q):
@@ -66,6 +77,13 @@ class Rewriter():
 
     def _get_head(self, q):
         return q.consequent
+
+    def _get_factorizable(self, sigma, q):
+        factorizable = []
+        for S in self._get_term(q):
+            factorizable.append(S)
+
+        return factorizable
 
     def _get_applicable(self, sigma, q):
         applicable = []
@@ -133,8 +151,12 @@ class Rewriter():
     def _is_shared(self, a, q):
         count = 0
         for term in q.args:
-            if a in term.args:
-                count += 1
+            if isinstance(term, FunctionApplication):
+                if a in term.args:
+                    count += 1
+            else:
+                if a == term:
+                    count += 1
 
         if count > 1:
             return True
@@ -166,3 +188,18 @@ class Rewriter():
                 renamed.add(arg)
         sigma.args = tuple(new_args)
         return sigma, renamed
+
+    def _recombine(self, q0, old_S, new_S):
+        qTemp = q0.antecedent
+        new_args = []
+        if isinstance(qTemp.args[0], FunctionApplication):
+            for old_q0 in qTemp.args:
+                if old_q0 == old_S:
+                    new_args.append(new_S)
+                else:
+                    new_args.append(old_S)
+        else:
+            new_args.append(new_S)
+
+        q0.antecedent.args = tuple(new_args)
+        return q0
