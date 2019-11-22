@@ -1,7 +1,7 @@
 import typing
 
-from ..logic import LogicOperator, ExistentialPredicate, Constant, FunctionApplication
-from ..logic.unification import most_general_unifier
+from ..logic import LogicOperator, ExistentialPredicate, Constant, FunctionApplication, Implication
+from ..logic.unification import most_general_unifier, apply_substitution
 
 
 class RightImplication(LogicOperator):
@@ -43,40 +43,34 @@ class Rewriter():
                 q0 = q[0]
                 for sigma in self.owl.expressions:
                     # rewriting step
-                    body_q = self._get_body(q0)
+                    body_q = q0.antecedent
                     S_applicable = self._get_applicable(sigma, body_q)
                     for S in S_applicable:
                         i += 1
                         sigma_i = self._rename(sigma, i)
-                        qS = most_general_unifier(S, sigma_i.consequent)
-                        # Maybe, I should improve this function
-                        new_q0 = self._recombine(q0, S, qS[1])
-                        if (new_q0, 'r', 'u') not in Q_temp and (new_q0, 'r', 'e') not in Q_temp:
-                            Q_rew.add((new_q0, 'r', 'u'))
+                        qS = most_general_unifier(sigma_i.consequent, S)
+                        if qS is not None:
+                            new_q0 = self._combine(q0.consequent, qS, sigma_i.antecedent)
+                            if (new_q0, 'r', 'u') not in Q_temp and (new_q0, 'r', 'e') not in Q_temp:
+                                Q_rew.add((new_q0, 'r', 'u'))
 
                     # factorization step
-                    body_q = self._get_body(q0)
+                    body_q = q0.antecedent
                     S_factorizable = self._get_factorizable(sigma, body_q)
                     for S in S_factorizable:
-                        new_q0 = most_general_unifier(S, body_q)
-                        if (
-                            new_q0 is not None and
-                            (new_q0, 'r', 'u') not in Q_temp and (new_q0, 'r', 'e') not in Q_temp and
-                            (new_q0, 'f', 'u') not in Q_temp and (new_q0, 'f', 'e') not in Q_temp
-                        ):
-                            Q_rew.add((new_q0, 'f', 'u'))
+                        qS = most_general_unifier(S, body_q)
+                        if qS is not None:
+                            new_q0 = self._combine(q0.consequent, qS, sigma_i.antecedent)
+                            if (
+                                (new_q0, 'r', 'u') not in Q_temp and (new_q0, 'r', 'e') not in Q_temp and
+                                (new_q0, 'f', 'u') not in Q_temp and (new_q0, 'f', 'e') not in Q_temp
+                            ):
+                                Q_rew.add((new_q0, 'f', 'u'))
                 Q_rew.remove(q)
                 Q_rew.add((q[0], q[1], 'e'))
 
 
         return {x for x in Q_rew if x[2] == 'e'}
-
-
-    def _get_body(self, q):
-        return q.antecedent
-
-    def _get_head(self, q):
-        return q.consequent
 
     def _get_factorizable(self, sigma, q):
         factorizable = []
@@ -102,8 +96,8 @@ class Rewriter():
 
     def _is_applicable(self, sigma, q, S):
         if (
-            self._unifies(S, self._get_head(sigma)) and
-            self._not_in_existential(q, S, self._get_head(sigma))
+            self._unifies(S, sigma.consequent) and
+            self._not_in_existential(q, S, sigma.consequent)
         ):
             return True
 
@@ -189,17 +183,25 @@ class Rewriter():
         sigma.args = tuple(new_args)
         return sigma, renamed
 
-    def _recombine(self, q0, old_S, new_S):
-        qTemp = q0.antecedent
+    def _change_args(self, term, args, renamed):
         new_args = []
-        if isinstance(qTemp.args[0], FunctionApplication):
-            for old_q0 in qTemp.args:
-                if old_q0 == old_S:
-                    new_args.append(new_S)
-                else:
-                    new_args.append(old_S)
-        else:
-            new_args.append(new_S)
 
-        q0.antecedent.args = tuple(new_args)
+        if isinstance(term.args[0], FunctionApplication):
+            for t in term.args:
+                new_arg, renamed = self._change_args(t, args, renamed)
+                new_args.append(new_arg)
+        else:
+            for arg in term.args:
+                if arg not in renamed:
+                    arg = args[arg]
+                new_args.append(arg)
+                renamed.add(arg)
+        term.args = tuple(new_args)
+        return term, renamed
+
+    def _combine(self, q_cons, qS, sigma_ant):
+
+        sigma_ant = apply_substitution(sigma_ant, qS[0])
+        q0 = Implication(q_cons, sigma_ant)
+
         return q0
