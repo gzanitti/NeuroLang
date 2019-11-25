@@ -76,15 +76,16 @@ class Rewriter():
                     # factorization step
                     body_q = q0.antecedent
                     S_factorizable = self._get_factorizable(sigma, body_q)
-                    for S in S_factorizable:
-                        qS = most_general_unifier(S, body_q)
-                        if qS is not None:
-                            new_q0 = self._combine(q0.consequent, qS, sigma[0].antecedent)
-                            if (
-                                (new_q0, 'r', 'u') not in Q_rew and (new_q0, 'r', 'e') not in Q_rew and
-                                (new_q0, 'f', 'u') not in Q_rew and (new_q0, 'f', 'e') not in Q_rew
-                            ):
-                                Q_rew.add((new_q0, 'f', 'u'))
+                    if len(S_factorizable) > 1:
+                        for S in S_factorizable:
+                            qS = most_general_unifier(S, body_q)
+                            if qS is not None:
+                                new_q0 = self._combine(q0.consequent, qS, sigma[0].antecedent)
+                                if (
+                                    (new_q0, 'r', 'u') not in Q_rew and (new_q0, 'r', 'e') not in Q_rew and
+                                    (new_q0, 'f', 'u') not in Q_rew and (new_q0, 'f', 'e') not in Q_rew
+                                ):
+                                    Q_rew.add((new_q0, 'f', 'u'))
                 # query is now explored
                 Q_rew.remove(q)
                 Q_rew.add((q[0], q[1], 'e'))
@@ -177,7 +178,7 @@ class Rewriter():
     def _not_in_existential(self, q, S, sigma):
         for free_var in sigma[1]._list:
             existential_position = self._get_position_existential(sigma[0].consequent, free_var)
-            if self._position_not_shared_or_constant(q, S, existential_position):
+            if self._position_shared_or_constant(q, S, existential_position):
                 return False
 
         return True
@@ -192,13 +193,13 @@ class Rewriter():
 
         return positions
 
-    def _position_not_shared_or_constant(self, q, S, positions):
+    def _position_shared_or_constant(self, q, S, positions):
         for pos in positions:
             a = S.args[pos]
-            if isinstance(a, Constant) or not self._is_shared(a, q):
-                return False
+            if isinstance(a, Constant) or self._is_shared(a, q):
+                return True
 
-        return True
+        return False
 
     def _is_shared(self, a, q):
         count = 0
