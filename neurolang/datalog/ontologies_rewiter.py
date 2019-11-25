@@ -1,7 +1,11 @@
 import typing
 
-from ..logic import LogicOperator, ExistentialPredicate, Constant, FunctionApplication, Implication
+from ..logic import LogicOperator, Constant, FunctionApplication, Implication
 from ..logic.unification import most_general_unifier, apply_substitution
+from ..expression_walker import ReplaceSymbolWalker, add_match
+from ..logic.expression_processing import ExtractFreeVariablesWalker
+
+
 
 
 class RightImplication(LogicOperator):
@@ -19,6 +23,14 @@ class RightImplication(LogicOperator):
             repr(self.consequent), repr(self.antecedent)
         )
 
+class ExtractFreeVariablesRightImplicationWalker(ExtractFreeVariablesWalker):
+    @add_match(RightImplication)
+    def extract_variables_s(self, expression):
+        return (
+            self.walk(expression.consequent) -
+            self.walk(expression.antecedent)
+        )
+
 class Rewriter():
 
     def __init__(self, dl, owl):
@@ -34,24 +46,31 @@ class Rewriter():
         Q_rew = set({})
         for t in self.dl.expressions:
             Q_rew.add((t, 'r', 'u'))
+
+        sigma_free_vars = []
+        for sigma in self.owl.expressions:
+            efvw = ExtractFreeVariablesRightImplicationWalker()
+            free_vars = efvw.walk(sigma)
+            sigma_free_vars.append((sigma, free_vars))
+
         Q_temp = set({})
         while Q_rew != Q_temp:
             Q_temp = Q_rew.copy()
             for q in Q_temp:
                 if q[2] == 'e':
-                    break
+                    continue
                 q0 = q[0]
-                for sigma in self.owl.expressions:
+                for sigma in sigma_free_vars:
                     # rewriting step
                     body_q = q0.antecedent
                     S_applicable = self._get_applicable(sigma, body_q)
                     for S in S_applicable:
                         i += 1
-                        sigma_i = self._rename(sigma, i)
+                        sigma_i = self._rename(sigma[0], i)
                         qS = most_general_unifier(sigma_i.consequent, S)
                         if qS is not None:
                             new_q0 = self._combine(q0.consequent, qS, sigma_i.antecedent)
-                            if (new_q0, 'r', 'u') not in Q_temp and (new_q0, 'r', 'e') not in Q_temp:
+                            if (new_q0, 'r', 'u') not in Q_rew and (new_q0, 'r', 'e') not in Q_rew:
                                 Q_rew.add((new_q0, 'r', 'u'))
 
                     # factorization step
@@ -60,12 +79,13 @@ class Rewriter():
                     for S in S_factorizable:
                         qS = most_general_unifier(S, body_q)
                         if qS is not None:
-                            new_q0 = self._combine(q0.consequent, qS, sigma_i.antecedent)
+                            new_q0 = self._combine(q0.consequent, qS, sigma[0].antecedent)
                             if (
-                                (new_q0, 'r', 'u') not in Q_temp and (new_q0, 'r', 'e') not in Q_temp and
-                                (new_q0, 'f', 'u') not in Q_temp and (new_q0, 'f', 'e') not in Q_temp
+                                (new_q0, 'r', 'u') not in Q_rew and (new_q0, 'r', 'e') not in Q_rew and
+                                (new_q0, 'f', 'u') not in Q_rew and (new_q0, 'f', 'e') not in Q_rew
                             ):
                                 Q_rew.add((new_q0, 'f', 'u'))
+                # query is now explored
                 Q_rew.remove(q)
                 Q_rew.add((q[0], q[1], 'e'))
 
@@ -74,63 +94,101 @@ class Rewriter():
 
     def _get_factorizable(self, sigma, q):
         factorizable = []
-        for S in self._get_term(q):
-            factorizable.append(S)
+        for free_var in sigma[1]._list:
+            existential_position = self._get_position_existential(sigma[0].consequent, free_var)
+            for S in self._get_term(q, sigma[0].consequent):
+                if self._is_applicable(sigma, q, S) and self._var_same_position(existential_position, free_var, q, S):
+                    factorizable.append(S)
 
         return factorizable
 
+    def _var_same_position(self, pos, free_var, q, S):
+        if self._free_var_other_term(free_var, q, S):
+            return False
+
+        if self._free_var_same_term_other_position(free_var, pos, q, S):
+            return False
+
+        return True
+
+    def _free_var_other_term(self, free_var, q, S):
+        if isinstance(q.args[0], FunctionApplication):
+            for arg in q.args:
+                if arg != S and free_var in arg.args:
+                    return True
+        else:
+            if q != S and free_var in q.args:
+                    return True
+
+        return False
+
+    def _free_var_same_term_other_position(self, free_var, pos, q, S):
+        i = 0
+        if isinstance(q.args[0], FunctionApplication):
+            for arg in q.args:
+                i = 0
+                for sub_arg in arg.args:
+                    if sub_arg == free_var and i != pos:
+                        return True
+                    i += 1
+        else:
+            for arg in q.args:
+                if arg == free_var and i != pos:
+                    return True
+                i += 1
+
+        return False
+
     def _get_applicable(self, sigma, q):
         applicable = []
-        for S in self._get_term(q):
+        for S in self._get_term(q, sigma[0].consequent):
             if self._is_applicable(sigma, q, S):
                 applicable.append(S)
 
         return applicable
 
-    #Maybe there is a more elegante way to do this.
-    def _get_term(self, q):
+    def _get_term(self, q, sigma_con):
+        q_args = []
         if isinstance(q.args[0], FunctionApplication):
-            return q.args
+            for arg in q.args:
+                if arg.functor == sigma_con.functor:
+                    q_args.append(arg)
+        else:
+            if q.functor == sigma_con.functor:
+                q_args.append(q)
 
-        return (q,)
+        return q_args
 
     def _is_applicable(self, sigma, q, S):
         if (
-            self._unifies(S, sigma.consequent) and
-            self._not_in_existential(q, S, sigma.consequent)
+            self._unifies(S, sigma[0].consequent) and
+            self._not_in_existential(q, S, sigma)
         ):
             return True
 
         return False
 
-    def _unifies(self, S, sigma_head):
-        if isinstance(sigma_head, ExistentialPredicate):
-            sigma_head = sigma_head.body
-        if most_general_unifier(S, sigma_head) is None:
+    def _unifies(self, S, sigma):
+        if most_general_unifier(S, sigma) is None:
             return False
 
         return True
 
-    def _not_in_existential(self, q, S, sigma_head):
-        existential_position = self._get_position_existential(sigma_head)
-
-        if self._position_not_shared_or_constant(q, S, existential_position):
-            return False
+    def _not_in_existential(self, q, S, sigma):
+        for free_var in sigma[1]._list:
+            existential_position = self._get_position_existential(sigma[0].consequent, free_var)
+            if self._position_not_shared_or_constant(q, S, existential_position):
+                return False
 
         return True
 
-    def _get_position_existential(self, sigma):
+    def _get_position_existential(self, sigma, free_var):
         positions = []
-        if isinstance(sigma, ExistentialPredicate):
-            head = sigma.head
-            count = 0
-            for symbol in sigma.body.args:
-                if symbol == head:
-                    positions.append(count)
-                    count += 1
-        else:
-            #Exception?
-            return positions
+        count = 0
+        for symbol in sigma.args:
+            if symbol == free_var:
+                positions.append(count)
+                count += 1
 
         return positions
 
@@ -157,31 +215,31 @@ class Rewriter():
 
         return False
 
-    # Maybe there is a more elegante way to do this (probably with a solver).
     def _rename(self, sigma, index):
         renamed = set({})
-        sigma.antecedent, renamed = self._replace(sigma.antecedent, index, renamed)
-        sigma.consequent, renamed = self._replace(sigma.consequent, index, renamed)
+        a, renamed = self._replace(sigma.antecedent, index, renamed)
+        b, renamed = self._replace(sigma.consequent, index, renamed)
+        sus = {**a, **b}
+        rsw = ReplaceSymbolWalker(sus)
+        sigma = rsw.walk(sigma)
 
         return sigma
 
     def _replace(self, sigma, index, renamed):
-        new_args = []
-        if isinstance(sigma, ExistentialPredicate):
-            sigma = sigma.body
+        new_args = {}
 
         if isinstance(sigma.args[0], FunctionApplication):
             for app in sigma.args:
                 new_arg, renamed = self._replace(app, index, renamed)
-                new_args.append(new_arg)
+                new_args = {**new_args, **new_arg}
         else:
             for arg in sigma.args:
                 if arg not in renamed:
-                    arg.name = arg.name + str(index)
-                new_args.append(arg)
+                    temp = arg.fresh()
+                    temp.name = arg.name + str(index)
+                    new_args[arg] = temp
                 renamed.add(arg)
-        sigma.args = tuple(new_args)
-        return sigma, renamed
+        return new_args, renamed
 
     def _change_args(self, term, args, renamed):
         new_args = []

@@ -26,7 +26,7 @@ def test_rewriting_step():
     b = S_('b')
     db = C_('db')
 
-    sigma = RI_(project(x) & inArea(x, y), EP_(z, hasCollaborator(z, y, x)))
+    sigma = RI_(project(x) & inArea(x, y), hasCollaborator(z, y, x))
     q = I_(p(b), hasCollaborator(a, db, b))
 
     qB = EB_((q,))
