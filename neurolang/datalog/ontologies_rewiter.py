@@ -2,10 +2,9 @@ import typing
 
 from ..logic import LogicOperator, Constant, FunctionApplication, Implication
 from ..logic.unification import most_general_unifier, apply_substitution
-from ..expression_walker import ReplaceSymbolWalker, add_match
+from ..expression_walker import ReplaceSymbolWalker, ReplaceExpressionWalker, add_match, ExpressionWalker
 from ..logic.expression_processing import ExtractFreeVariablesWalker
-
-
+from ..expressions import Expression
 
 
 class RightImplication(LogicOperator):
@@ -69,7 +68,7 @@ class Rewriter():
                         sigma_i = self._rename(sigma[0], i)
                         qS = most_general_unifier(sigma_i.consequent, S)
                         if qS is not None:
-                            new_q0 = self._combine(q0.consequent, qS, sigma_i.antecedent)
+                            new_q0 = self._combine_rewriting(q0, qS, S, sigma_i.antecedent)
                             if (new_q0, 'r', 'u') not in Q_rew and (new_q0, 'r', 'e') not in Q_rew:
                                 Q_rew.add((new_q0, 'r', 'u'))
 
@@ -80,7 +79,7 @@ class Rewriter():
                         for S in S_factorizable:
                             qS = most_general_unifier(S, body_q)
                             if qS is not None:
-                                new_q0 = self._combine(q0.consequent, qS, sigma[0].antecedent)
+                                new_q0 = self._combine_factorization(q0, qS, sigma[0].antecedent)
                                 if (
                                     (new_q0, 'r', 'u') not in Q_rew and (new_q0, 'r', 'e') not in Q_rew and
                                     (new_q0, 'f', 'u') not in Q_rew and (new_q0, 'f', 'e') not in Q_rew
@@ -242,24 +241,17 @@ class Rewriter():
                 renamed.add(arg)
         return new_args, renamed
 
-    def _change_args(self, term, args, renamed):
-        new_args = []
+    def _combine_rewriting(self, q, qS, S, sigma_ant):
+        sigma_ant = apply_substitution(sigma_ant, qS[0])
+        replace = dict({S: sigma_ant})
+        rsw = ReplaceExpressionWalker(replace)
+        sigma_ant = rsw.walk(q.antecedent)
 
-        if isinstance(term.args[0], FunctionApplication):
-            for t in term.args:
-                new_arg, renamed = self._change_args(t, args, renamed)
-                new_args.append(new_arg)
-        else:
-            for arg in term.args:
-                if arg not in renamed:
-                    arg = args[arg]
-                new_args.append(arg)
-                renamed.add(arg)
-        term.args = tuple(new_args)
-        return term, renamed
+        q0 = Implication(q.consequent, sigma_ant)
 
-    def _combine(self, q_cons, qS, sigma_ant):
+        return q0
 
+    def _combine_factorization(self, q_cons, qS, sigma_ant):
         sigma_ant = apply_substitution(sigma_ant, qS[0])
         q0 = Implication(q_cons, sigma_ant)
 
