@@ -42,6 +42,41 @@ def test_normal_rewriting_step():
     q2 = I_(p(b), project(b) & inArea(b, db))
     assert imp1[0] == q2 or imp2[0] == q2
 
+
+def test_more_than_one_free_variable():
+    project = S_('project')
+    inArea = S_('inArea')
+    hasCollaborator = S_('hasCollaborator')
+    p = S_('p')
+
+    w = S_('w')
+    x = S_('x')
+    y = S_('y')
+    z = S_('z')
+    a = S_('a')
+    b = S_('b')
+    c = S_('c')
+    db = C_('db')
+
+    sigma = RI_(project(x) & inArea(x, y), hasCollaborator(w, z, y, x))
+    q = I_(p(b), hasCollaborator(c, a, db, b))
+
+    qB = EB_((q,))
+    sigmaB = EB_((sigma,))
+
+    orw = Rewriter(qB, sigmaB)
+    rewrite = orw.Xrewrite()
+    a = 1
+
+    assert len(rewrite) == 2
+    imp1 = rewrite.pop()
+    imp2 = rewrite.pop()
+    assert imp1[0] == q or imp2[0] == q
+    q2 = I_(p(b), project(b) & inArea(b, db))
+    assert imp1[0] == q2 or imp2[0] == q2
+
+
+
 def test_unsound_rewriting_step_constant():
     project = S_('project')
     inArea = S_('inArea')
