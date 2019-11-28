@@ -76,15 +76,15 @@ class Rewriter():
                     body_q = q0.antecedent
                     S_factorizable = self._get_factorizable(sigma, body_q)
                     if len(S_factorizable) > 1:
-                        for S in S_factorizable:
-                            qS = most_general_unifier(S, body_q)
-                            if qS is not None:
-                                new_q0 = self._combine_factorization(q0, qS, sigma[0].antecedent)
-                                if (
-                                    (new_q0, 'r', 'u') not in Q_rew and (new_q0, 'r', 'e') not in Q_rew and
-                                    (new_q0, 'f', 'u') not in Q_rew and (new_q0, 'f', 'e') not in Q_rew
-                                ):
-                                    Q_rew.add((new_q0, 'f', 'u'))
+                        qS = self._full_unification(S_factorizable)
+                        #qS = most_general_unifier(S, body_q)
+                        if qS is not None:
+                            new_q0 = self._combine_factorization(q0.consequent, qS)
+                            if (
+                                (new_q0, 'r', 'u') not in Q_rew and (new_q0, 'r', 'e') not in Q_rew and
+                                (new_q0, 'f', 'u') not in Q_rew and (new_q0, 'f', 'e') not in Q_rew
+                            ):
+                                Q_rew.add((new_q0, 'f', 'u'))
                 # query is now explored
                 Q_rew.remove(q)
                 Q_rew.add((q[0], q[1], 'e'))
@@ -92,21 +92,31 @@ class Rewriter():
 
         return {x for x in Q_rew if x[2] == 'e'}
 
+    def _full_unification(self, S):
+        acum = S[0]
+        for term in S:
+            temp = most_general_unifier(term, acum)
+            new_term = apply_substitution(temp[1], temp[0])
+            acum = new_term
+
+        return acum
+
+
     def _get_factorizable(self, sigma, q):
         factorizable = []
         for free_var in sigma[1]._list:
             existential_position = self._get_position_existential(sigma[0].consequent, free_var)
-            for S in self._get_term(q, sigma[0].consequent):
-                if self._is_applicable(sigma, q, S) and self._var_same_position(existential_position, free_var, q, S):
-                    factorizable.append(S)
+            S = self._get_term(q, sigma[0].consequent)
+            if self._is_factorizable(S, existential_position) and self._var_same_position(existential_position, free_var, q, S):
+                factorizable.append(S)
 
-        return factorizable
+        return sum(factorizable, [])
 
     def _var_same_position(self, pos, free_var, q, S):
         if self._free_var_other_term(free_var, q, S):
             return False
 
-        if self._free_var_same_term_other_position(free_var, pos, q, S):
+        if self._free_var_same_term_other_position(free_var, pos, q):
             return False
 
         return True
@@ -114,7 +124,7 @@ class Rewriter():
     def _free_var_other_term(self, free_var, q, S):
         if isinstance(q.args[0], FunctionApplication):
             for arg in q.args:
-                if arg != S and free_var in arg.args:
+                if arg not in S and free_var in arg.args:
                     return True
         else:
             if q != S and free_var in q.args:
@@ -122,7 +132,7 @@ class Rewriter():
 
         return False
 
-    def _free_var_same_term_other_position(self, free_var, pos, q, S):
+    def _free_var_same_term_other_position(self, free_var, pos, q):
         i = 0
         if isinstance(q.args[0], FunctionApplication):
             for arg in q.args:
@@ -140,12 +150,11 @@ class Rewriter():
         return False
 
     def _get_applicable(self, sigma, q):
-        applicable = []
-        for S in self._get_term(q, sigma[0].consequent):
-            if self._is_applicable(sigma, q, S):
-                applicable.append(S)
+        S = self._get_term(q, sigma[0].consequent)
+        if self._is_applicable(sigma, q, S):
+            return S
 
-        return applicable
+        return []
 
     def _get_term(self, q, sigma_con):
         q_args = []
@@ -168,9 +177,20 @@ class Rewriter():
 
         return False
 
-    def _unifies(self, S, sigma):
-        if most_general_unifier(S, sigma) is None:
+    def _is_factorizable(self, S, pos):
+        for term in S:
+            if most_general_unifier(term, S[0]) is None:
+                return False
+
+        if not pos:
             return False
+
+        return True
+
+    def _unifies(self, S, sigma):
+        for term in S:
+            if most_general_unifier(term, sigma) is None:
+                return False
 
         return True
 
@@ -194,9 +214,10 @@ class Rewriter():
 
     def _position_shared_or_constant(self, q, S, positions):
         for pos in positions:
-            a = S.args[pos]
-            if isinstance(a, Constant) or self._is_shared(a, q):
-                return True
+            for term in S:
+                a = term.args[pos]
+                if isinstance(a, Constant) or self._is_shared(a, q):
+                    return True
 
         return False
 
@@ -251,8 +272,8 @@ class Rewriter():
 
         return q0
 
-    def _combine_factorization(self, q_cons, qS, sigma_ant):
-        sigma_ant = apply_substitution(sigma_ant, qS[0])
-        q0 = Implication(q_cons, sigma_ant)
+    def _combine_factorization(self, q_cons, qS):
+        #sigma_ant = apply_substitution(sigma_ant, qS[0])
+        q0 = Implication(q_cons, qS)
 
         return q0
