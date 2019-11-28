@@ -66,7 +66,6 @@ def test_more_than_one_free_variable():
 
     orw = Rewriter(qB, sigmaB)
     rewrite = orw.Xrewrite()
-    a = 1
 
     assert len(rewrite) == 2
     imp1 = rewrite.pop()
