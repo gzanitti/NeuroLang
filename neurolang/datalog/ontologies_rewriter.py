@@ -30,7 +30,7 @@ class ExtractFreeVariablesRightImplicationWalker(ExtractFreeVariablesWalker):
             self.walk(expression.antecedent)
         )
 
-class Rewriter():
+class OntologyRewriter():
 
     def __init__(self, dl, owl):
         self.dl = dl
