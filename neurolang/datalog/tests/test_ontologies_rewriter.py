@@ -2,7 +2,7 @@ import pytest
 
 from neurolang.logic import ExistentialPredicate, Implication, FunctionApplication
 from neurolang.expressions import Symbol, Constant, ExpressionBlock
-from neurolang.datalog.ontologies_rewiter import RightImplication, Rewriter
+from neurolang.datalog.ontologies_rewriter import RightImplication, OntologyRewriter
 
 S_ = Symbol
 C_ = Constant
