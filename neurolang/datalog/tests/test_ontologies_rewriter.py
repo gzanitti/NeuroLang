@@ -1,8 +1,12 @@
 import pytest
 
-from neurolang.logic import ExistentialPredicate, Implication, FunctionApplication
+from neurolang.logic import (
+    ExistentialPredicate, Implication, FunctionApplication
+)
 from neurolang.expressions import Symbol, Constant, ExpressionBlock
-from neurolang.datalog.ontologies_rewriter import RightImplication, OntologyRewriter
+from neurolang.datalog.ontologies_rewriter import (
+    RightImplication, OntologyRewriter
+)
 
 S_ = Symbol
 C_ = Constant
@@ -29,10 +33,10 @@ def test_normal_rewriting_step():
     sigma = RI_(project(x) & inArea(x, y), hasCollaborator(z, y, x))
     q = I_(p(b), hasCollaborator(a, db, b))
 
-    qB = EB_((q,))
-    sigmaB = EB_((sigma,))
+    qB = EB_((q, ))
+    sigmaB = EB_((sigma, ))
 
-    orw = Rewriter(qB, sigmaB)
+    orw = OntologyRewriter(qB, sigmaB)
     rewrite = orw.Xrewrite()
 
     assert len(rewrite) == 2
@@ -61,10 +65,10 @@ def test_more_than_one_free_variable():
     sigma = RI_(project(x) & inArea(x, y), hasCollaborator(w, z, y, x))
     q = I_(p(b), hasCollaborator(c, a, db, b))
 
-    qB = EB_((q,))
-    sigmaB = EB_((sigma,))
+    qB = EB_((q, ))
+    sigmaB = EB_((sigma, ))
 
-    orw = Rewriter(qB, sigmaB)
+    orw = OntologyRewriter(qB, sigmaB)
     rewrite = orw.Xrewrite()
 
     assert len(rewrite) == 2
@@ -73,7 +77,6 @@ def test_more_than_one_free_variable():
     assert imp1[0] == q or imp2[0] == q
     q2 = I_(p(b), project(b) & inArea(b, db))
     assert imp1[0] == q2 or imp2[0] == q2
-
 
 
 def test_unsound_rewriting_step_constant():
@@ -92,15 +95,16 @@ def test_unsound_rewriting_step_constant():
     sigma = RI_(project(x) & inArea(x, y), hasCollaborator(z, y, x))
     q = I_(p(b), hasCollaborator(c, db, b))
 
-    qB = EB_((q,))
-    sigmaB = EB_((sigma,))
+    qB = EB_((q, ))
+    sigmaB = EB_((sigma, ))
 
-    orw = Rewriter(qB, sigmaB)
+    orw = OntologyRewriter(qB, sigmaB)
     rewrite = orw.Xrewrite()
 
     assert len(rewrite) == 1
     imp = rewrite.pop()
     assert imp[0] == q
+
 
 def test_unsound_rewriting_step_shared():
     project = S_('project')
@@ -117,10 +121,10 @@ def test_unsound_rewriting_step_shared():
     sigma = RI_(project(x) & inArea(x, y), hasCollaborator(z, y, x))
     q = I_(p(b), hasCollaborator(b, db, b))
 
-    qB = EB_((q,))
-    sigmaB = EB_((sigma,))
+    qB = EB_((q, ))
+    sigmaB = EB_((sigma, ))
 
-    orw = Rewriter(qB, sigmaB)
+    orw = OntologyRewriter(qB, sigmaB)
     rewrite = orw.Xrewrite()
 
     assert len(rewrite) == 1
@@ -146,10 +150,10 @@ def test_outside_variable():
     sigma = RI_(s(x) & r(x, y), t(x, y, z))
     q2 = I_(p(a), s(c) & t(a, b, c) & t(a, e, c))
 
-    qB = EB_((q2,))
-    sigmaB = EB_((sigma,))
+    qB = EB_((q2, ))
+    sigmaB = EB_((sigma, ))
 
-    orw = Rewriter(qB, sigmaB)
+    orw = OntologyRewriter(qB, sigmaB)
     rewrite = orw.Xrewrite()
 
     assert len(rewrite) == 2
@@ -176,10 +180,13 @@ def test_example_4_3():
 
     q = I_(p(b, c), hasCollaborator(a, b, c) & collaborator(a))
 
-    qB = EB_((q,))
-    sigmaB = EB_((sigma1, sigma2,))
+    qB = EB_((q, ))
+    sigmaB = EB_((
+        sigma1,
+        sigma2,
+    ))
 
-    orw = Rewriter(qB, sigmaB)
+    orw = OntologyRewriter(qB, sigmaB)
     rewrite = orw.Xrewrite()
 
     assert len(rewrite) == 4

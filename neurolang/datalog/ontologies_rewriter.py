@@ -2,7 +2,9 @@ import typing
 
 from ..logic import LogicOperator, Constant, FunctionApplication, Implication
 from ..logic.unification import most_general_unifier, apply_substitution
-from ..expression_walker import ReplaceSymbolWalker, ReplaceExpressionWalker, add_match, ExpressionWalker
+from ..expression_walker import (
+    ReplaceSymbolWalker, ReplaceExpressionWalker, add_match, ExpressionWalker
+)
 from ..logic.expression_processing import ExtractFreeVariablesWalker
 from ..expressions import Expression
 
@@ -22,6 +24,7 @@ class RightImplication(LogicOperator):
             repr(self.consequent), repr(self.antecedent)
         )
 
+
 class ExtractFreeVariablesRightImplicationWalker(ExtractFreeVariablesWalker):
     @add_match(RightImplication)
     def extract_variables_s(self, expression):
@@ -30,8 +33,8 @@ class ExtractFreeVariablesRightImplicationWalker(ExtractFreeVariablesWalker):
             self.walk(expression.antecedent)
         )
 
-class OntologyRewriter():
 
+class OntologyRewriter():
     def __init__(self, dl, owl):
         self.dl = dl
         self.owl = owl
@@ -68,8 +71,12 @@ class OntologyRewriter():
                         sigma_i = self._rename(sigma[0], i)
                         qS = most_general_unifier(sigma_i.consequent, S)
                         if qS is not None:
-                            new_q0 = self._combine_rewriting(q0, qS, S, sigma_i.antecedent)
-                            if (new_q0, 'r', 'u') not in Q_rew and (new_q0, 'r', 'e') not in Q_rew:
+                            new_q0 = self._combine_rewriting(
+                                q0, qS, S, sigma_i.antecedent
+                            )
+                            if (new_q0, 'r', 'u') not in Q_rew and (
+                                new_q0, 'r', 'e'
+                            ) not in Q_rew:
                                 Q_rew.add((new_q0, 'r', 'u'))
 
                     # factorization step
@@ -79,16 +86,17 @@ class OntologyRewriter():
                         qS = self._full_unification(S_factorizable)
                         #qS = most_general_unifier(S, body_q)
                         if qS is not None:
-                            new_q0 = self._combine_factorization(q0.consequent, qS)
-                            if (
-                                (new_q0, 'r', 'u') not in Q_rew and (new_q0, 'r', 'e') not in Q_rew and
-                                (new_q0, 'f', 'u') not in Q_rew and (new_q0, 'f', 'e') not in Q_rew
-                            ):
+                            new_q0 = self._combine_factorization(
+                                q0.consequent, qS
+                            )
+                            if ((new_q0, 'r', 'u') not in Q_rew and
+                                (new_q0, 'r', 'e') not in Q_rew and
+                                (new_q0, 'f', 'u') not in Q_rew and
+                                (new_q0, 'f', 'e') not in Q_rew):
                                 Q_rew.add((new_q0, 'f', 'u'))
                 # query is now explored
                 Q_rew.remove(q)
                 Q_rew.add((q[0], q[1], 'e'))
-
 
         return {x for x in Q_rew if x[2] == 'e'}
 
@@ -101,13 +109,17 @@ class OntologyRewriter():
 
         return acum
 
-
     def _get_factorizable(self, sigma, q):
         factorizable = []
         for free_var in sigma[1]._list:
-            existential_position = self._get_position_existential(sigma[0].consequent, free_var)
+            existential_position = self._get_position_existential(
+                sigma[0].consequent, free_var
+            )
             S = self._get_term(q, sigma[0].consequent)
-            if self._is_factorizable(S, existential_position) and self._var_same_position(existential_position, free_var, q, S):
+            if self._is_factorizable(S, existential_position
+                                     ) and self._var_same_position(
+                                         existential_position, free_var, q, S
+                                     ):
                 factorizable.append(S)
 
         return sum(factorizable, [])
@@ -128,7 +140,7 @@ class OntologyRewriter():
                     return True
         else:
             if q != S and free_var in q.args:
-                    return True
+                return True
 
         return False
 
@@ -196,7 +208,9 @@ class OntologyRewriter():
 
     def _not_in_existential(self, q, S, sigma):
         for free_var in sigma[1]._list:
-            existential_position = self._get_position_existential(sigma[0].consequent, free_var)
+            existential_position = self._get_position_existential(
+                sigma[0].consequent, free_var
+            )
             if self._position_shared_or_constant(q, S, existential_position):
                 return False
 
@@ -273,7 +287,6 @@ class OntologyRewriter():
         return q0
 
     def _combine_factorization(self, q_cons, qS):
-        #sigma_ant = apply_substitution(sigma_ant, qS[0])
         q0 = Implication(q_cons, qS)
 
         return q0

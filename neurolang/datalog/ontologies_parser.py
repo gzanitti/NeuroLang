@@ -9,8 +9,8 @@ S_ = Symbol
 EB_ = ExpressionBlock
 RI_ = RightImplication
 
-class OntologiesParser():
 
+class OntologiesParser():
     def __init__(self, paths, namespaces):
         self.namespaces_dic = None
         self.owl_dic = None
@@ -42,7 +42,7 @@ class OntologiesParser():
 
     def _process_properties(self, namespaces):
         namespaces_properties = self.df[~self.df.Property.str.
-                                   contains('#')].Property.unique()
+                                        contains('#')].Property.unique()
         namespaces_properties = list(
             filter(
                 lambda x: (x in n for n in namespaces), namespaces_properties
@@ -56,7 +56,8 @@ class OntologiesParser():
         )
         self.namespaces_dic = dict(zip(namespaces_properties, namespaces_prop))
 
-        owl_properties = self.df[self.df.Property.str.contains('#')].Property.unique()
+        owl_properties = self.df[self.df.Property.str.contains('#')
+                                 ].Property.unique()
         owl_rdf = list(
             map(
                 lambda a: list(
@@ -99,7 +100,7 @@ class OntologiesParser():
                 e1,
                 e2,
             ) for e1, e2 in relations_list),
-                                      name='relations')
+                                           name='relations')
 
             destrieux_dataset = datasets.fetch_atlas_destrieux_2009()
             destrieux_map = nib.load(destrieux_dataset['maps'])
@@ -121,9 +122,9 @@ class OntologiesParser():
                 name,
                 region,
             ) for name, region in destrieux),
-                                      name='destrieux_regions')
+                                           name='destrieux_regions')
 
-        return self.neurolangDL.walk(self.eb)
+        return self.neurolangDL.load_constraints(self.eb)
 
     def _load_properties(self):
         all_props = list(self.owl_dic.keys()
@@ -141,7 +142,7 @@ class OntologiesParser():
             #name = self._replace_property(prop)
             #symbol_name = name.replace(':', '_')
             symbol = S_(symbol_name)
-            symbols += (RightImplication(triple(x, symbol, z), symbol(x, z)),)
+            symbols += (RightImplication(triple(x, symbol, z), symbol(x, z)), )
 
         self.eb = ExpressionBlock(self.eb.expressions + symbols)
 
@@ -150,9 +151,12 @@ class OntologiesParser():
 
         owl_disjointWith = S_('owl_disjointWith')
         rdf_schema_subClassOf = S_('rdf_schema_subClassOf')
-        disjoint = RI_(owl_disjointWith(x, y) & rdf_schema_subClassOf(w, x) & rdf_schema_subClassOf(z, y), owl_disjointWith(w, z))
+        disjoint = RI_(
+            owl_disjointWith(x, y) & rdf_schema_subClassOf(w, x) &
+            rdf_schema_subClassOf(z, y), owl_disjointWith(w, z)
+        )
 
-        self.eb = ExpressionBlock(self.eb.expressions + (disjoint,))
+        self.eb = ExpressionBlock(self.eb.expressions + (disjoint, ))
 
         self._parse_somevalue_properties()
 
@@ -168,15 +172,25 @@ class OntologiesParser():
 
         owl_someValuesFrom = S_('owl_someValuesFrom')
         owl_someValuesFrom2 = S_('owl_someValuesFrom2')
-        someValueFrom = RI_(owl_someValuesFrom2(x, y), owl_someValuesFrom(x, y))
-
+        someValueFrom = RI_(
+            owl_someValuesFrom2(x, y), owl_someValuesFrom(x, y)
+        )
 
         pointer = S_('pointer')
         rdf_schema_subClassOf = S_('rdf_schema_subClassOf')
 
-        temp_triple = RI_(pointer(w) & owl_someValuesFrom(w, z) & owl_onProperty(w, y) & rdf_schema_subClassOf(x, w), y(x, z))
+        temp_triple = RI_(
+            pointer(w) & owl_someValuesFrom(w, z) & owl_onProperty(w, y) &
+            rdf_schema_subClassOf(x, w), y(x, z)
+        )
 
-        self.eb = ExpressionBlock(self.eb.expressions + (onProperty, someValueFrom, temp_triple,))
+        self.eb = ExpressionBlock(
+            self.eb.expressions + (
+                onProperty,
+                someValueFrom,
+                temp_triple,
+            )
+        )
 
     def _parse_subclasses(self):
         rdf_schema_subClassOf = S_('rdf_schema_subClassOf')
@@ -186,17 +200,34 @@ class OntologiesParser():
         y = S_('y')
         z = S_('z')
 
-        subClass = RI_(rdf_schema_subClassOf2(x, y), rdf_schema_subClassOf(x, y))
-        subClass2 = RI_(rdf_schema_subClassOf2(x, y) & rdf_schema_subClassOf(y, z), rdf_schema_subClassOf(x, z))
+        subClass = RI_(
+            rdf_schema_subClassOf2(x, y), rdf_schema_subClassOf(x, y)
+        )
+        subClass2 = RI_(
+            rdf_schema_subClassOf2(x, y) & rdf_schema_subClassOf(y, z),
+            rdf_schema_subClassOf(x, z)
+        )
 
         rdf_syntax_ns_rest = S_('rdf_syntax_ns_rest')
-        ns_rest = RI_(rdf_schema_subClassOf(x, y) & rdf_syntax_ns_rest(w, x) & rdf_syntax_ns_rest(z, y), rdf_schema_subClassOf(w, z))
+        ns_rest = RI_(
+            rdf_schema_subClassOf(x, y) & rdf_syntax_ns_rest(w, x) &
+            rdf_syntax_ns_rest(z, y), rdf_schema_subClassOf(w, z)
+        )
 
         rdf_syntax_ns_type = S_('rdf_syntax_ns_type')
-        class_sim = RI_(rdf_syntax_ns_type(x, S_('http://www.w3.org/2002/07/owl#Class')), rdf_schema_subClassOf(x, x))
+        class_sim = RI_(
+            rdf_syntax_ns_type(x, S_('http://www.w3.org/2002/07/owl#Class')),
+            rdf_schema_subClassOf(x, x)
+        )
 
-        self.eb = ExpressionBlock(self.eb.expressions + (subClass, subClass2, ns_rest, class_sim,))
-
+        self.eb = ExpressionBlock(
+            self.eb.expressions + (
+                subClass,
+                subClass2,
+                ns_rest,
+                class_sim,
+            )
+        )
 
     def _parse_subproperties(self):
         rdf_schema_subPropertyOf = S_('rdf_schema_subPropertyOf')
@@ -206,23 +237,45 @@ class OntologiesParser():
         y = S_('y')
         z = S_('z')
 
-        subProperty = RI_(rdf_schema_subPropertyOf2(x, y), rdf_schema_subPropertyOf(x, y))
-        subProperty2 = RI_(rdf_schema_subPropertyOf2(x, y) & rdf_schema_subPropertyOf(y, z), rdf_schema_subPropertyOf(x, z))
+        subProperty = RI_(
+            rdf_schema_subPropertyOf2(x, y), rdf_schema_subPropertyOf(x, y)
+        )
+        subProperty2 = RI_(
+            rdf_schema_subPropertyOf2(x, y) & rdf_schema_subPropertyOf(y, z),
+            rdf_schema_subPropertyOf(x, z)
+        )
 
         owl_inverseOf = S_('owl_inverseOf')
-        inverseOf = RI_(rdf_schema_subPropertyOf(x, y) & owl_inverseOf(w, x) & owl_inverseOf(z, y), rdf_schema_subPropertyOf(w, z))
+        inverseOf = RI_(
+            rdf_schema_subPropertyOf(x, y) & owl_inverseOf(w, x) &
+            owl_inverseOf(z, y), rdf_schema_subPropertyOf(w, z)
+        )
 
         rdf_syntax_ns_type = S_('rdf_syntax_ns_type')
-        objectProperty = RI_(rdf_syntax_ns_type(x, S_('http://www.w3.org/2002/07/owl#ObjectProperty')), rdf_schema_subPropertyOf(x, x))
+        objectProperty = RI_(
+            rdf_syntax_ns_type(
+                x, S_('http://www.w3.org/2002/07/owl#ObjectProperty')
+            ), rdf_schema_subPropertyOf(x, x)
+        )
 
-        self.eb = ExpressionBlock(self.eb.expressions + (subProperty, subProperty2, inverseOf, objectProperty,))
+        self.eb = ExpressionBlock(
+            self.eb.expressions + (
+                subProperty,
+                subProperty2,
+                inverseOf,
+                objectProperty,
+            )
+        )
 
     def _load_domain(self):
         triple = S_('triple')
         #triples = tuple([triple(S_(e1), S_(self._replace_property(e2)), S_(e3)) for e1, e2, e3 in self.df.values])
-        triples = tuple([triple(S_(e1), S_(e2), S_(e3)) for e1, e2, e3 in self.df.values])
+        triples = tuple([
+            triple(S_(e1), S_(e2), S_(e3)) for e1, e2, e3 in self.df.values
+        ])
 
-        pointers = self.df.loc[~self.df.Entity.str.contains('http')].Entity.unique()
+        pointers = self.df.loc[~self.df.Entity.str.
+                               contains('http')].Entity.unique()
         pointer = S_('pointer')
         pointer_list = tuple([pointer(S_(e)) for e in pointers])
 
@@ -235,8 +288,9 @@ class OntologiesParser():
         dom2 = RightImplication(triple(x, y, z), dom(y))
         dom3 = RightImplication(triple(x, y, z), dom(z))
 
-        self.eb = EB_(self.eb.expressions + triples + pointer_list + (dom1, dom2, dom3))
-
+        self.eb = EB_(
+            self.eb.expressions + triples + pointer_list + (dom1, dom2, dom3)
+        )
 
     def get_destrieux_relations(self):
         return [
