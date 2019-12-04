@@ -4,6 +4,8 @@ import nibabel as nib
 from nilearn import datasets
 from .ontologies_rewriter import RightImplication
 from ..expressions import Symbol, ExpressionBlock
+# I think we should move this RegionMixin outside frontend
+from neurolang.frontend.query_resolution import RegionMixin
 
 S_ = Symbol
 EB_ = ExpressionBlock
@@ -15,11 +17,11 @@ class OntologiesParser():
         self.namespaces_dic = None
         self.owl_dic = None
         if isinstance(paths, list):
-            self._parse_ontology(paths, namespaces)
+            self._load_ontology(paths, namespaces)
         else:
-            self._parse_ontology([paths], [namespaces])
+            self._load_ontology([paths], [namespaces])
 
-    def _parse_ontology(self, paths, namespaces):
+    def _load_ontology(self, paths, namespaces):
         self._create_graph(paths)
         self._process_properties(namespaces)
 
@@ -87,7 +89,7 @@ class OntologiesParser():
 
         return new_prop
 
-    def load_ontology(self, neurolangDL, destrieux_relations=False):
+    def parse_ontology(self, neurolangDL, destrieux_relations=False):
         self.eb = EB_(())
         self.neurolangDL = neurolangDL
         self._load_domain()
@@ -96,11 +98,9 @@ class OntologiesParser():
         # Maybe we should put this outside the class
         if destrieux_relations:
             relations_list = self.get_destrieux_relations()
-            self.neurolangDL.add_tuple_set(((
-                e1,
-                e2,
-            ) for e1, e2 in relations_list),
-                                           name='relations')
+            relations = S_('relations')
+
+            symbols_list = tuple([relations(S_(e1), S_(e2)) for e1, e2 in relations_list])
 
             destrieux_dataset = datasets.fetch_atlas_destrieux_2009()
             destrieux_map = nib.load(destrieux_dataset['maps'])
@@ -110,7 +110,7 @@ class OntologiesParser():
                 if label_number == 0:
                     continue
                 name = name.decode()
-                region = self.neurolangDL.create_region(
+                region = RegionMixin.create_region(
                     destrieux_map, label=label_number
                 )
                 if region is None:
@@ -118,11 +118,10 @@ class OntologiesParser():
                 name = name.replace('-', '_').replace(' ', '_').lower()
                 destrieux.append((name, region))
 
-            self.neurolangDL.add_tuple_set(((
-                name,
-                region,
-            ) for name, region in destrieux),
-                                           name='destrieux_regions')
+            destrieux_regions = S_('destrieux_regions')
+            regions_list = tuple([destrieux_regions(S_(name), S_(region)) for name, region in destrieux])
+            self.eb = ExpressionBlock(self.eb.expressions + symbols_list + regions_list)
+
 
         return self.neurolangDL.load_constraints(self.eb)
 
