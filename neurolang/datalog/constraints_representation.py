@@ -15,3 +15,6 @@ class DatalogConstraintsProgram(DatalogProgram):
 
     def load_constraints(self, expression_block):
         self.symbol_table['__constraints__'] = expression_block
+
+    def get_constraints(self):
+        return self.symbol_table['__constraints__']
