@@ -3,10 +3,11 @@ import pandas as pd
 import nibabel as nib
 from nilearn import datasets
 from .ontologies_rewriter import RightImplication
-from ..expressions import Symbol, ExpressionBlock
+from ..expressions import Symbol, ExpressionBlock, Constant
 # I think we should move this RegionMixin outside frontend
 from neurolang.frontend.query_resolution import RegionMixin
 
+C_ = Constant
 S_ = Symbol
 EB_ = ExpressionBlock
 RI_ = RightImplication
@@ -98,9 +99,13 @@ class OntologiesParser():
         # Maybe we should put this outside the class
         if destrieux_relations:
             relations_list = self.get_destrieux_relations()
-            relations = S_('relations')
+            #relations = S_('relations')
 
-            symbols_list = tuple([relations(S_(e1), S_(e2)) for e1, e2 in relations_list])
+            destrieux_region = S_('destrieux_region')
+            destrieux_name = S_('destrieux_name')
+            fma_region = S_('fma_name')
+
+            symbols_list = tuple([RightImplication(fma_region(S_(fma)), destrieux_name(S_(destrieux))) for destrieux, fma in relations_list])
 
             destrieux_dataset = datasets.fetch_atlas_destrieux_2009()
             destrieux_map = nib.load(destrieux_dataset['maps'])
@@ -118,8 +123,7 @@ class OntologiesParser():
                 name = name.replace('-', '_').replace(' ', '_').lower()
                 destrieux.append((name, region))
 
-            destrieux_regions = S_('destrieux_regions')
-            regions_list = tuple([destrieux_regions(S_(name), S_(region)) for name, region in destrieux])
+            regions_list = tuple([RightImplication(destrieux_name(S_(name)), destrieux_region(region)) for name, region in destrieux])
             self.eb = ExpressionBlock(self.eb.expressions + symbols_list + regions_list)
 
 
