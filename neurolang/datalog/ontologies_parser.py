@@ -123,7 +123,8 @@ class OntologiesParser():
             self.eb = ExpressionBlock(self.eb.expressions + symbols_list + regions_list)
 
 
-        return self.neurolangDL.load_constraints(self.eb)
+        self.neurolangDL.load_constraints(self.eb)
+        return self.neurolangDL
 
     def _load_properties(self):
         all_props = list(self.owl_dic.keys()
