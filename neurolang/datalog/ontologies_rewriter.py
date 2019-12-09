@@ -51,9 +51,10 @@ class OntologyRewriter():
 
         sigma_free_vars = []
         for sigma in self.owl.expressions:
-            efvw = ExtractFreeVariablesRightImplicationWalker()
-            free_vars = efvw.walk(sigma)
-            sigma_free_vars.append((sigma, free_vars))
+            if isinstance(sigma, RightImplication):
+                efvw = ExtractFreeVariablesRightImplicationWalker()
+                free_vars = efvw.walk(sigma)
+                sigma_free_vars.append((sigma, free_vars))
 
         Q_temp = set({})
         while Q_rew != Q_temp:
