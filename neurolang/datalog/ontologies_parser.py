@@ -123,7 +123,7 @@ class OntologiesParser():
                 name = name.replace('-', '_').replace(' ', '_').lower()
                 destrieux.append((name, region))
 
-            regions_list = tuple([RightImplication(destrieux_name(S_(name)), destrieux_region(region)) for name, region in destrieux])
+            regions_list = tuple([RightImplication(destrieux_name(S_(name)), destrieux_region(S_(region))) for name, region in destrieux])
             self.eb = ExpressionBlock(self.eb.expressions + symbols_list + regions_list)
 
 
