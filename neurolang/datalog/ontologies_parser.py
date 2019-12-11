@@ -105,7 +105,7 @@ class OntologiesParser():
             destrieux_name = S_('destrieux_name')
             fma_region = S_('fma_name')
 
-            symbols_list = tuple([RightImplication(fma_region(S_(fma)), destrieux_name(S_(destrieux))) for destrieux, fma in relations_list])
+            symbols_list = tuple([RightImplication(fma_region(C_(fma)), destrieux_name(C_(destrieux))) for destrieux, fma in relations_list])
 
             destrieux_dataset = datasets.fetch_atlas_destrieux_2009()
             destrieux_map = nib.load(destrieux_dataset['maps'])
@@ -123,7 +123,7 @@ class OntologiesParser():
                 name = name.replace('-', '_').replace(' ', '_').lower()
                 destrieux.append((name, region))
 
-            regions_list = tuple([RightImplication(destrieux_name(S_(name)), destrieux_region(C_(region))) for name, region in destrieux])
+            regions_list = tuple([RightImplication(destrieux_name(C_(name)), destrieux_region(C_(region))) for name, region in destrieux])
             self.eb = ExpressionBlock(self.eb.expressions + symbols_list + regions_list)
 
 
