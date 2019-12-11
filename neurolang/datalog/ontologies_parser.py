@@ -220,7 +220,7 @@ class OntologiesParser():
 
         rdf_syntax_ns_type = S_('rdf_syntax_ns_type')
         class_sim = RI_(
-            rdf_syntax_ns_type(x, S_('http://www.w3.org/2002/07/owl#Class')),
+            rdf_syntax_ns_type(x, C_('http://www.w3.org/2002/07/owl#Class')),
             rdf_schema_subClassOf(x, x)
         )
 
@@ -258,7 +258,7 @@ class OntologiesParser():
         rdf_syntax_ns_type = S_('rdf_syntax_ns_type')
         objectProperty = RI_(
             rdf_syntax_ns_type(
-                x, S_('http://www.w3.org/2002/07/owl#ObjectProperty')
+                x, C_('http://www.w3.org/2002/07/owl#ObjectProperty')
             ), rdf_schema_subPropertyOf(x, x)
         )
 
@@ -275,13 +275,13 @@ class OntologiesParser():
         triple = S_('triple')
         #triples = tuple([triple(S_(e1), S_(self._replace_property(e2)), S_(e3)) for e1, e2, e3 in self.df.values])
         triples = tuple([
-            triple(S_(e1), S_(e2), S_(e3)) for e1, e2, e3 in self.df.values
+            triple(C_(e1), C_(e2), C_(e3)) for e1, e2, e3 in self.df.values
         ])
 
         pointers = self.df.loc[~self.df.Entity.str.
                                contains('http')].Entity.unique()
         pointer = S_('pointer')
-        pointer_list = tuple([pointer(S_(e)) for e in pointers])
+        pointer_list = tuple([pointer(C_(e)) for e in pointers])
 
         dom = S_('dom')
         x = S_('x')
