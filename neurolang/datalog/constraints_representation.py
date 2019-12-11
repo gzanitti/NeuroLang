@@ -27,10 +27,10 @@ class DatalogConstraintsProgram(DatalogProgram):
 
         self._validate_implication_syntax(consequent, antecedent)
 
-        if consequent.functor in self.symbol_table:
-            disj = self._new_intensional_internal_representation(consequent)
-        else:
-            disj = tuple()
+        #if consequent.functor in self.symbol_table:
+        #    disj = self._new_intensional_internal_representation(consequent)
+        #else:
+        disj = tuple()
 
         if expression not in disj:
             disj += (expression,)
