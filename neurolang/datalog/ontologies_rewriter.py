@@ -6,7 +6,7 @@ from ..expression_walker import (
     ReplaceSymbolWalker, ReplaceExpressionWalker, add_match, ExpressionWalker
 )
 from ..logic.expression_processing import ExtractFreeVariablesWalker
-from ..expressions import Expression
+from ..expressions import Expression, Symbol
 
 
 class RightImplication(LogicOperator):
@@ -271,9 +271,12 @@ class OntologyRewriter():
         else:
             for arg in sigma.args:
                 if arg not in renamed:
-                    temp = arg.fresh()
-                    temp.name = arg.name + str(index)
-                    new_args[arg] = temp
+                    if isinstance(arg, Symbol):
+                        temp = arg.fresh()
+                        temp.name = arg.name + str(index)
+                        new_args[arg] = temp
+                    else:
+                        new_args[arg] = arg
                 renamed.add(arg)
         return new_args, renamed
 
