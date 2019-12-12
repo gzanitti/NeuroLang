@@ -190,3 +190,34 @@ def test_example_4_3():
     rewrite = orw.Xrewrite()
 
     assert len(rewrite) == 4
+
+def test_rewriter_without_symbols():
+    from neurolang.datalog.ontologies_parser import OntologiesParser
+
+    from neurolang.datalog.constraints_representation import DatalogConstraintsProgram
+    from neurolang.expression_walker import ExpressionBasicEvaluator
+
+    class Datalog(DatalogConstraintsProgram, ExpressionBasicEvaluator):
+        pass
+
+    paths = ['./neurolang/datalog/tests/neurofma_fma3.0.owl']
+    namespaces = ['http://sig.biostr.washington.edu/fma3.0']
+    onto = OntologiesParser(paths, namespaces)
+    dl = Datalog()
+    datalog_program = onto.parse_ontology(dl, destrieux_relations=True)
+
+
+    res = Symbol('res')
+    x = S_('x')
+    y = S_('y')
+    regional_part = Symbol('http://sig.biostr.washington.edu/fma3.0#regional_part_of')
+    label = Symbol('http://www.w3.org/2000/01/rdf-schema#label')
+
+    imps = (Implication(res(y), label(y, C_('Frontal Lobe'))),)
+    imps += (Implication(res(x), regional_part(x, y)),)
+
+    qB = ExpressionBlock(imps)
+
+    orw = OntologyRewriter(qB, datalog_program.get_constraints())
+    rewrite = orw.Xrewrite()
+    a = 1

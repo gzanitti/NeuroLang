@@ -66,6 +66,8 @@ class OntologyRewriter():
                 for sigma in sigma_free_vars:
                     # rewriting step
                     body_q = q0.antecedent
+                    if sigma[0].antecedent.args[1] == Constant('http://www.w3.org/2000/01/rdf-schema#label'):
+                        a = 2
                     S_applicable = self._get_applicable(sigma, body_q)
                     for S in S_applicable:
                         i += 1
@@ -163,6 +165,7 @@ class OntologyRewriter():
         return False
 
     def _get_applicable(self, sigma, q):
+        #S = self._get_term(q, sigma[0].antecedent)
         S = self._get_term(q, sigma[0].consequent)
         if self._is_applicable(sigma, q, S):
             return S
@@ -275,8 +278,8 @@ class OntologyRewriter():
                         temp = arg.fresh()
                         temp.name = arg.name + str(index)
                         new_args[arg] = temp
-                    else:
-                        new_args[arg] = arg
+                    #else:
+                    #    new_args[arg] = arg
                 renamed.add(arg)
         return new_args, renamed
 

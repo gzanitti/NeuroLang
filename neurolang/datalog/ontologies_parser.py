@@ -104,8 +104,12 @@ class OntologiesParser():
             destrieux_region = S_('destrieux_region')
             destrieux_name = S_('destrieux_name')
             fma_region = S_('fma_name')
+            x = S_('x')
 
-            symbols_list = tuple([RightImplication(fma_region(C_(fma)), destrieux_name(C_(destrieux))) for destrieux, fma in relations_list])
+            triple = S_('triple')
+            label = C_('http://www.w3.org/2000/01/rdf-schema#label')
+
+            symbols_list = tuple([RightImplication(triple(x, label, C_(fma)), destrieux_name(x, C_(destrieux))) for destrieux, fma in relations_list])
 
             destrieux_dataset = datasets.fetch_atlas_destrieux_2009()
             destrieux_map = nib.load(destrieux_dataset['maps'])
@@ -123,7 +127,7 @@ class OntologiesParser():
                 name = name.replace('-', '_').replace(' ', '_').lower()
                 destrieux.append((name, region))
 
-            regions_list = tuple([RightImplication(destrieux_name(C_(name)), destrieux_region(C_(region))) for name, region in destrieux])
+            regions_list = tuple([RightImplication(destrieux_name(x, C_(name)), destrieux_region(x, C_(region))) for name, region in destrieux])
             self.eb = ExpressionBlock(self.eb.expressions + symbols_list + regions_list)
 
 
@@ -146,7 +150,8 @@ class OntologiesParser():
             #name = self._replace_property(prop)
             #symbol_name = name.replace(':', '_')
             symbol = S_(symbol_name)
-            symbols += (RightImplication(triple(x, symbol, z), symbol(x, z)), )
+            const = C_(symbol_name)
+            symbols += (RightImplication(triple(x, const, z), symbol(x, z)), )
 
         self.eb = ExpressionBlock(self.eb.expressions + symbols)
 
@@ -277,6 +282,8 @@ class OntologiesParser():
         triples = tuple([
             triple(C_(e1), C_(e2), C_(e3)) for e1, e2, e3 in self.df.values
         ])
+
+        self.triples = triples
 
         pointers = self.df.loc[~self.df.Entity.str.
                                contains('http')].Entity.unique()

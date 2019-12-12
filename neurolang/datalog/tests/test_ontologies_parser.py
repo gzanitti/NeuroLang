@@ -9,10 +9,11 @@ class Datalog(DatalogConstraintsProgram, ExpressionBasicEvaluator):
     pass
 
 
-@pytest.mark.skip(reason="No way of currently testing this")
+#@pytest.mark.skip(reason="No way of currently testing this")
 def test_load_ontology():
-    paths = ['neurofma_fma3.0.owl']
+    paths = ['./neurolang/datalog/tests/neurofma_fma3.0.owl']
     namespaces = ['http://sig.biostr.washington.edu/fma3.0']
     onto = OntologiesParser(paths, namespaces)
     dl = Datalog()
-    datalog_program = onto.load_ontology(dl, destrieux_relations=False)
+    datalog_program = onto.parse_ontology(dl, destrieux_relations=False)
+    a=1
