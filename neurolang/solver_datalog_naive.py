@@ -33,10 +33,6 @@ __all__ = [
     "SolverNonRecursiveDatalogNaive",
     "is_conjunctive_expression",
     "extract_logic_free_variables",
-<<<<<<< HEAD
-    "extract_datalog_predicates",
-=======
->>>>>>> master
     "is_conjunctive_expression_with_nested_predicates"
 ]
 
