@@ -126,6 +126,7 @@ class OntologyRewriter():
         return sum(factorizable, [])
 
     def _var_same_position(self, pos, free_var, q, S):
+        # revisar si este cambio tiene logica, o porque dio marcha atras dos test
         eq_vars = self.equivalent_var(pos, S)
         for var in eq_vars:
             if self._free_var_other_term(var, q, S):
