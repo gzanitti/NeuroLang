@@ -186,7 +186,7 @@ def test_outside_variable():
     orw = OntologyRewriter(qB, sigmaB)
     rewrite = orw.Xrewrite()
 
-    assert len(rewrite) == 2
+    assert len(rewrite) == 1
     factorized = [x for x in rewrite if x[1] == 'f']
     assert len(factorized) == 0
 

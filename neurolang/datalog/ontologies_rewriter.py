@@ -126,13 +126,22 @@ class OntologyRewriter():
         return sum(factorizable, [])
 
     def _var_same_position(self, pos, free_var, q, S):
-        if self._free_var_other_term(free_var, q, S):
-            return False
+        eq_vars = self.equivalent_var(pos, S)
+        for var in eq_vars:
+            if self._free_var_other_term(var, q, S):
+                return False
 
-        if self._free_var_same_term_other_position(free_var, pos, q):
-            return False
+            if self._free_var_same_term_other_position(var, pos, q):
+                return False
 
         return True
+
+    def equivalent_var(self, pos, S):
+        eq_vars = []
+        for elem in pos:
+            eq_vars.append(S[0].args[elem])
+
+        return eq_vars
 
     def _free_var_other_term(self, free_var, q, S):
         if isinstance(q, NaryLogicOperator):
@@ -223,7 +232,7 @@ class OntologyRewriter():
         for symbol in sigma.args:
             if symbol == free_var:
                 positions.append(count)
-                count += 1
+            count += 1
 
         return positions
 
