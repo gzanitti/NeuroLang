@@ -1,5 +1,5 @@
 from .. import expressions as exp
-from . import UnaryLogicOperator
+from . import UnaryLogicOperator, NaryLogicOperator
 
 
 def most_general_unifier(expression1, expression2):
@@ -53,6 +53,15 @@ def most_general_unifier_extract_arguments(expression1, expression2):
 
 
 def apply_substitution(function_application, substitution):
+    if isinstance(function_application, NaryLogicOperator):
+        nary_application = tuple()
+        for formula in function_application.formulas:
+            nary_application += (apply_substitution(formula, substitution),)
+
+        return type(function_application)(
+            nary_application
+        )
+
     if isinstance(function_application, UnaryLogicOperator):
         return function_application.apply(*(
             apply_substitution(formula, substitution)

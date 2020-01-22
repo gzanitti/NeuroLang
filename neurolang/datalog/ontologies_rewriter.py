@@ -1,6 +1,6 @@
 import typing
 
-from ..logic import LogicOperator, Constant, FunctionApplication, Implication
+from ..logic import LogicOperator, Constant, FunctionApplication, Implication, Conjunction, NaryLogicOperator
 from ..logic.unification import most_general_unifier, apply_substitution
 from ..expression_walker import (
     ReplaceSymbolWalker, ReplaceExpressionWalker, add_match, ExpressionWalker
@@ -46,11 +46,11 @@ class OntologyRewriter():
         ACM Transactions on Database Systems, vol. 39, May 2014.'''
         i = 0
         Q_rew = set({})
-        for t in self.dl.expressions:
+        for t in self.dl.formulas:
             Q_rew.add((t, 'r', 'u'))
 
         sigma_free_vars = []
-        for sigma in self.owl.expressions:
+        for sigma in self.owl.formulas:
             if isinstance(sigma, RightImplication):
                 efvw = ExtractFreeVariablesRightImplicationWalker()
                 free_vars = efvw.walk(sigma)
@@ -135,9 +135,9 @@ class OntologyRewriter():
         return True
 
     def _free_var_other_term(self, free_var, q, S):
-        if isinstance(q.args[0], FunctionApplication):
-            for arg in q.args:
-                if arg not in S and free_var in arg.args:
+        if isinstance(q, NaryLogicOperator):
+            for formula in q.formulas:
+                if formula not in S and free_var in formula.args:
                     return True
         else:
             if q != S and free_var in q.args:
@@ -147,10 +147,10 @@ class OntologyRewriter():
 
     def _free_var_same_term_other_position(self, free_var, pos, q):
         i = 0
-        if isinstance(q.args[0], FunctionApplication):
-            for arg in q.args:
+        if isinstance(q, NaryLogicOperator):
+            for formula in q.formulas:
                 i = 0
-                for sub_arg in arg.args:
+                for sub_arg in formula.args:
                     if sub_arg == free_var and i != pos:
                         return True
                     i += 1
@@ -163,7 +163,6 @@ class OntologyRewriter():
         return False
 
     def _get_applicable(self, sigma, q):
-        #S = self._get_term(q, sigma[0].antecedent)
         S = self._get_term(q, sigma[0].consequent)
         if self._is_applicable(sigma, q, S):
             return S
@@ -172,10 +171,10 @@ class OntologyRewriter():
 
     def _get_term(self, q, sigma_con):
         q_args = []
-        if isinstance(q.args[0], FunctionApplication):
-            for arg in q.args:
-                if arg.functor == sigma_con.functor:
-                    q_args.append(arg)
+        if isinstance(q, NaryLogicOperator):
+            for formula in q.formulas:
+                if formula.functor == sigma_con.functor:
+                    q_args.append(formula)
         else:
             if q.functor == sigma_con.functor:
                 q_args.append(q)
@@ -239,11 +238,12 @@ class OntologyRewriter():
 
     def _is_shared(self, a, q):
         count = 0
-        for term in q.args:
-            if isinstance(term, FunctionApplication):
+        if isinstance(q, NaryLogicOperator):
+            for term in q.formulas:
                 if a in term.args:
                     count += 1
-            else:
+        else:
+            for term in q.args:
                 if a == term:
                     count += 1
 
@@ -265,8 +265,8 @@ class OntologyRewriter():
     def _replace(self, sigma, index, renamed):
         new_args = {}
 
-        if isinstance(sigma.args[0], FunctionApplication):
-            for app in sigma.args:
+        if isinstance(sigma, NaryLogicOperator):
+            for app in sigma.formulas:
                 new_arg, renamed = self._replace(app, index, renamed)
                 new_args = {**new_args, **new_arg}
         else:
@@ -276,8 +276,6 @@ class OntologyRewriter():
                         temp = arg.fresh()
                         temp.name = arg.name + str(index)
                         new_args[arg] = temp
-                    #else:
-                    #    new_args[arg] = arg
                 renamed.add(arg)
         return new_args, renamed
 
@@ -297,3 +295,4 @@ class OntologyRewriter():
         q0 = Implication(q_cons, qS)
 
         return q0
+

@@ -7,6 +7,9 @@ from neurolang.expressions import Symbol, Constant, ExpressionBlock
 from neurolang.datalog.ontologies_rewriter import (
     RightImplication, OntologyRewriter
 )
+from neurolang.datalog.expressions import TranslateToLogic
+from neurolang import expression_walker as ew
+from neurolang.datalog.aggregation import DatalogWithAggregationMixin
 
 S_ = Symbol
 C_ = Constant
@@ -15,6 +18,11 @@ EB_ = ExpressionBlock
 FA_ = FunctionApplication
 I_ = Implication
 RI_ = RightImplication
+
+class DatalogTranslator(
+    TranslateToLogic, ew.IdentityWalker, DatalogWithAggregationMixin
+):
+    pass
 
 
 def test_normal_rewriting_step():
@@ -36,6 +44,10 @@ def test_normal_rewriting_step():
     qB = EB_((q, ))
     sigmaB = EB_((sigma, ))
 
+    dt = DatalogTranslator()
+    qB = dt.walk(qB)
+    sigmaB = dt.walk(sigmaB)
+
     orw = OntologyRewriter(qB, sigmaB)
     rewrite = orw.Xrewrite()
 
@@ -44,6 +56,7 @@ def test_normal_rewriting_step():
     imp2 = rewrite.pop()
     assert imp1[0] == q or imp2[0] == q
     q2 = I_(p(b), project(b) & inArea(b, db))
+    q2 = dt.walk(q2)
     assert imp1[0] == q2 or imp2[0] == q2
 
 
@@ -68,6 +81,10 @@ def test_more_than_one_free_variable():
     qB = EB_((q, ))
     sigmaB = EB_((sigma, ))
 
+    dt = DatalogTranslator()
+    qB = dt.walk(qB)
+    sigmaB = dt.walk(sigmaB)
+
     orw = OntologyRewriter(qB, sigmaB)
     rewrite = orw.Xrewrite()
 
@@ -76,6 +93,7 @@ def test_more_than_one_free_variable():
     imp2 = rewrite.pop()
     assert imp1[0] == q or imp2[0] == q
     q2 = I_(p(b), project(b) & inArea(b, db))
+    q2 = dt.walk(q2)
     assert imp1[0] == q2 or imp2[0] == q2
 
 
@@ -97,6 +115,10 @@ def test_unsound_rewriting_step_constant():
 
     qB = EB_((q, ))
     sigmaB = EB_((sigma, ))
+
+    dt = DatalogTranslator()
+    qB = dt.walk(qB)
+    sigmaB = dt.walk(sigmaB)
 
     orw = OntologyRewriter(qB, sigmaB)
     rewrite = orw.Xrewrite()
@@ -123,6 +145,10 @@ def test_unsound_rewriting_step_shared():
 
     qB = EB_((q, ))
     sigmaB = EB_((sigma, ))
+
+    dt = DatalogTranslator()
+    qB = dt.walk(qB)
+    sigmaB = dt.walk(sigmaB)
 
     orw = OntologyRewriter(qB, sigmaB)
     rewrite = orw.Xrewrite()
@@ -152,6 +178,10 @@ def test_outside_variable():
 
     qB = EB_((q2, ))
     sigmaB = EB_((sigma, ))
+
+    dt = DatalogTranslator()
+    qB = dt.walk(qB)
+    sigmaB = dt.walk(sigmaB)
 
     orw = OntologyRewriter(qB, sigmaB)
     rewrite = orw.Xrewrite()
@@ -186,6 +216,10 @@ def test_example_4_3():
         sigma2,
     ))
 
+    dt = DatalogTranslator()
+    qB = dt.walk(qB)
+    sigmaB = dt.walk(sigmaB)
+
     orw = OntologyRewriter(qB, sigmaB)
     rewrite = orw.Xrewrite()
 
@@ -204,7 +238,7 @@ def test_rewriter_without_symbols():
     namespaces = ['http://sig.biostr.washington.edu/fma3.0']
     onto = OntologiesParser(paths, namespaces)
     dl = Datalog()
-    datalog_program = onto.parse_ontology(dl, destrieux_relations=True)
+    datalog_program = onto.parse_ontology(dl)
 
 
     res = Symbol('res')
