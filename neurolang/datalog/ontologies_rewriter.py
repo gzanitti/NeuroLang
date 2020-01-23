@@ -117,6 +117,8 @@ class OntologyRewriter():
                 sigma[0].consequent, free_var
             )
             S = self._get_term(q, sigma[0].consequent)
+            if not S:
+                return []
             if self._is_factorizable(S, existential_position
                                      ) and self._var_same_position(
                                          existential_position, free_var, q, S
@@ -161,7 +163,7 @@ class OntologyRewriter():
             for formula in q.formulas:
                 i = 0
                 for sub_arg in formula.args:
-                    if sub_arg == free_var and i != pos:
+                    if sub_arg == free_var and i not in pos:
                         return True
                     i += 1
         else:
