@@ -9,8 +9,14 @@ class LogicOperator(Definition):
 class UnaryLogicOperator(LogicOperator):
     pass
 
+class BinaryLogicOperator(LogicOperator):
+    pass
 
-class Conjunction(LogicOperator):
+class NaryLogicOperator(LogicOperator):
+    pass
+
+
+class Conjunction(NaryLogicOperator):
     def __init__(self, formulas):
         self.formulas = tuple(formulas)
 
@@ -24,7 +30,7 @@ class Conjunction(LogicOperator):
         ) + ')'
 
 
-class Disjunction(LogicOperator):
+class Disjunction(NaryLogicOperator):
     def __init__(self, formulas):
         self.formulas = tuple(formulas)
 
@@ -49,7 +55,7 @@ class Disjunction(LogicOperator):
         ) + ')'
 
 
-class Union(LogicOperator):
+class Union(NaryLogicOperator):
     def __init__(self, formulas):
         self.formulas = tuple(formulas)
 
@@ -83,7 +89,7 @@ class Negation(UnaryLogicOperator):
         return f'\u00AC{self.formula}'
 
 
-class Implication(LogicOperator):
+class Implication(BinaryLogicOperator):
     """Expression of the form `P(x) \u2190 Q(x)`"""
 
     def __init__(self, consequent, antecedent):
