@@ -260,6 +260,24 @@ def _topological_sort_groundings_util(
     visited.add(pred_symb)
 
 
+def _topological_sort_groundings_util_no_recursion(
+    pred_symb, dependencies, visited, result
+):
+    to_crawl = list(dependencies[pred_symb])
+    while to_crawl:
+        current = to_crawl.pop()
+        if current in visited:
+            continue
+        result.append(current)
+        visited.add(current)
+        node_children = dependencies[current]
+        to_crawl.extend(node_children - visited)
+
+    if pred_symb not in result:
+        result.append(pred_symb)
+        visited.add(pred_symb)
+
+
 def _topological_sort_groundings(groundings):
     dependencies = defaultdict(dict)
     pred_symb_to_grounding = dict()
@@ -267,13 +285,21 @@ def _topological_sort_groundings(groundings):
         pred_symb = _get_grounding_pred_symb(grounding)
         pred_symb_to_grounding[pred_symb] = grounding
         dependencies[pred_symb] = _get_grounding_dependencies(grounding)
+    #result = list()
+    #visited = set()
+    #for grounding in groundings:
+    #    pred_symb = _get_grounding_pred_symb(grounding)
+    #    _topological_sort_groundings_util(
+    #        pred_symb, dependencies, visited, result
+    #    )
     result = list()
     visited = set()
     for grounding in groundings:
         pred_symb = _get_grounding_pred_symb(grounding)
-        _topological_sort_groundings_util(
+        _topological_sort_groundings_util_no_recursion(
             pred_symb, dependencies, visited, result
         )
+    #assert result == result2
     return [pred_symb_to_grounding.get(pred_symb) for pred_symb in result]
 
 

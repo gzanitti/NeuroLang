@@ -12,8 +12,7 @@ from ..expressions import (
 from ..datalog.expressions import Fact, TranslateToLogic
 from ..logic import Union, Implication, Conjunction, ExistentialPredicate
 from ..logic.expression_processing import (
-    extract_logic_predicates,
-    extract_logic_free_variables
+    extract_logic_predicates, extract_logic_free_variables
 )
 from ..exceptions import NeuroLangException
 from ..type_system import Unknown
@@ -52,23 +51,25 @@ from ..relational_algebra import (
 from ..typed_symbol_table import TypedSymbolTable
 from ..logic import Union
 
+
 def is_probabilistic_fact(expression):
     return (
-        isinstance(expression, Implication)
-        and isinstance(expression.consequent, ProbabilisticPredicate)
-        and isinstance(expression.consequent.body, FunctionApplication)
-        and expression.antecedent == Constant[bool](True)
+        isinstance(expression, Implication) and
+        isinstance(expression.consequent, ProbabilisticPredicate) and
+        isinstance(expression.consequent.body, FunctionApplication) and
+        expression.antecedent == Constant[bool](True)
     )
 
 
 def is_existential_probabilistic_fact(expression):
     return (
-        isinstance(expression, Implication)
-        and isinstance(expression.consequent, ExistentialPredicate)
-        and isinstance(expression.consequent.body, ProbabilisticPredicate)
-        and isinstance(expression.consequent.body.body, FunctionApplication)
-        and expression.antecedent == Constant[bool](True)
+        isinstance(expression, Implication) and
+        isinstance(expression.consequent, ExistentialPredicate) and
+        isinstance(expression.consequent.body, ProbabilisticPredicate) and
+        isinstance(expression.consequent.body.body, FunctionApplication) and
+        expression.antecedent == Constant[bool](True)
     )
+
 
 def is_existential_predicate(expression):
     free_vars = extract_logic_free_variables(expression)
@@ -125,6 +126,7 @@ def _check_existential_probfact_validity(expression):
             "probability of the probability fact"
         )
 
+
 def _rewrite_existential_predicate(expression):
     ext_free_vars = extract_logic_free_variables(expression)
     new_head = _fill_variables_in_head(ext_free_vars, expression.consequent)
@@ -132,6 +134,7 @@ def _rewrite_existential_predicate(expression):
     new_rule = Implication(expression.consequent, new_head)
 
     return new_rule, new_exp
+
 
 def _fill_variables_in_head(free_vars, exp_head):
     new_functor = Symbol.fresh()
@@ -169,8 +172,7 @@ def _build_pfact_set(pred_symb, pfacts):
         for arg in some_pfact.consequent.body.args
     ]
     iterable = [
-        (_const_or_symb_as_python_type(pf.consequent.probability),)
-        + tuple(
+        (_const_or_symb_as_python_type(pf.consequent.probability), ) + tuple(
             _const_or_symb_as_python_type(arg)
             for arg in pf.consequent.body.args
         )
@@ -180,7 +182,6 @@ def _build_pfact_set(pred_symb, pfacts):
 
 
 class ProbDatalogExistentialTranslator(ExpressionWalker):
-
     @add_match(ExpressionBlock)
     def expression_block(self, code):
         new_code = tuple()
@@ -191,19 +192,17 @@ class ProbDatalogExistentialTranslator(ExpressionWalker):
 
     @add_match(Implication(Expression, Constant))
     def existential_fact(self, expression):
-        return (expression,)
+        return (expression, )
 
-    @add_match(
-        Implication,
-        lambda exp: is_existential_predicate(exp)
-    )
+    @add_match(Implication, lambda exp: is_existential_predicate(exp))
     def existential_predicate(self, expression):
         modified_rule, new_rule = _rewrite_existential_predicate(expression)
         return tuple([modified_rule, new_rule])
 
     @add_match(Expression)
     def definition(self, expression):
-        return (expression,)
+        return (expression, )
+
 
 class ProbDatalogProgram(DatalogProgram, ExpressionWalker):
     """
@@ -221,9 +220,8 @@ class ProbDatalogProgram(DatalogProgram, ExpressionWalker):
     @property
     def predicate_symbols(self):
         return (
-            set(self.intensional_database())
-            | set(self.extensional_database())
-            | set(self.pfact_pred_symbs)
+            set(self.intensional_database()) |
+            set(self.extensional_database()) | set(self.pfact_pred_symbs)
         )
 
     @property
@@ -272,14 +270,14 @@ class ProbDatalogProgram(DatalogProgram, ExpressionWalker):
 
     def _register_probfact_pred_symb(self, pred_symb):
         self.protected_keywords.add(self.pfact_pred_symbs_symb.name)
-        self.symbol_table[self.pfact_pred_symbs_symb] = Constant[AbstractSet](
-            self.pfact_pred_symbs | {pred_symb}
-        )
+        self.symbol_table[
+            self.pfact_pred_symbs_symb
+        ] = Constant[AbstractSet](self.pfact_pred_symbs | {pred_symb})
 
     @add_match(
         Implication,
-        lambda exp: is_probabilistic_fact(exp)
-        or is_existential_probabilistic_fact(exp),
+        lambda exp: is_probabilistic_fact(exp) or
+        is_existential_probabilistic_fact(exp),
     )
     def probfact_or_existential_probfact(self, expression):
         if is_existential_probabilistic_fact(expression):
@@ -343,15 +341,13 @@ class GDatalogToProbDatalogTranslator(PatternWalker):
             conjunct_formulas(rule.antecedent, probfact_atom),
         )
         return self.walk(
-            ExpressionBlock(
-                [
-                    Implication(
-                        ProbabilisticPredicate(probability, probfact_atom),
-                        Constant[bool](True),
-                    ),
-                    new_rule,
-                ]
-            )
+            ExpressionBlock([
+                Implication(
+                    ProbabilisticPredicate(probability, probfact_atom),
+                    Constant[bool](True),
+                ),
+                new_rule,
+            ])
         )
 
     @add_match(ExpressionBlock)
@@ -437,7 +433,7 @@ def build_pfact_grounding_from_set(pred_symb, relation):
         expression=expression,
         relation=Constant[AbstractSet](
             NamedRelationalAlgebraFrozenSet(
-                columns=(param_symb.name,) + tuple(arg.name for arg in args),
+                columns=(param_symb.name, ) + tuple(arg.name for arg in args),
                 iterable=relation.value,
             )
         ),
@@ -482,10 +478,14 @@ def ground_probdatalog_program(
 ):
     pd_program = ProbDatalogProgram()
     pd_program.walk(pd_code)
-    for symb, probabilistic_set in probabilistic_sets.items():
-        pd_program.add_probfacts_from_tuples(symb, probabilistic_set)
-    for symb, extensional_set in extensional_sets.items():
-        pd_program.add_extensional_predicate_from_tuples(symb, extensional_set)
+    if probabilistic_sets:
+        for symb, probabilistic_set in probabilistic_sets.items():
+            pd_program.add_probfacts_from_tuples(symb, probabilistic_set)
+    if extensional_sets:
+        for symb, extensional_set in extensional_sets.items():
+            pd_program.add_extensional_predicate_from_tuples(
+                symb, extensional_set
+            )
     for disjunction in pd_program.intensional_database().values():
         if len(disjunction.formulas) > 1:
             raise NeuroLangException(
