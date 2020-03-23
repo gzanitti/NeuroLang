@@ -368,9 +368,17 @@ class GDatalogToProbDatalog(
     pass
 
 
-def probdatalog_to_datalog(pd_program):
-    new_symbol_table = TypedSymbolTable()
+import warnings
+
+
+def probdatalog_to_datalog(pd_program, datalog=Datalog, out=None):
+    if out is None:
+        new_symbol_table = TypedSymbolTable()
+    else:
+        new_symbol_table = out.symbol_table
     for pred_symb in pd_program.symbol_table:
+        if pred_symb in new_symbol_table:
+            warnings.warn(f'Overwritting {pred_symb}')
         value = pd_program.symbol_table[pred_symb]
         if pred_symb in pd_program.pfact_pred_symbs:
             if not isinstance(value, Constant[AbstractSet]):
@@ -386,7 +394,7 @@ def probdatalog_to_datalog(pd_program):
             )
         else:
             new_symbol_table[pred_symb] = value
-    return Datalog(new_symbol_table)
+    return datalog(new_symbol_table)
 
 
 def build_extensional_grounding(pred_symb, tuple_set):

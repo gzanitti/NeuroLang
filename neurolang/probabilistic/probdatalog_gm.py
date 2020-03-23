@@ -271,7 +271,7 @@ def _topological_sort_groundings_util_no_recursion(
         result.append(current)
         visited.add(current)
         node_children = dependencies[current]
-        to_crawl.extend(node_children - visited)
+        to_crawl.extend(list(set(node_children) - set(visited)))
 
     if pred_symb not in result:
         result.append(pred_symb)
@@ -299,7 +299,7 @@ def _topological_sort_groundings(groundings):
         _topological_sort_groundings_util_no_recursion(
             pred_symb, dependencies, visited, result
         )
-    #assert result == result2
+
     return [pred_symb_to_grounding.get(pred_symb) for pred_symb in result]
 
 
@@ -334,6 +334,22 @@ class TranslateGroundedProbDatalogToGraphicalModel(PatternWalker):
             Constant[Mapping](self.groundings),
         )
 
+    #@add_match(
+    #    Grounding, lambda exp: isinstance(exp.expression, ProbabilisticChoice)
+    #)
+    #def probchoice_grounding(self, grounding):
+    #    rv_symb = grounding.expression.predicate.functor
+    #    choice_rv_symb = Symbol("__choice__{}".format(rv_symb.name))
+    #    self._add_grounding(rv_symb, grounding)
+    #    self._add_random_variable(
+    #        rv_symb, probchoice_distribution(grounding, choice_rv_symb)
+    #    )
+    #    self._add_random_variable(
+    #        choice_rv_symb, ChoiceDistribution(grounding)
+    #    )
+    #    self._add_grounding(choice_rv_symb, grounding)
+    #    self._add_edges(rv_symb, {choice_rv_symb})
+
     @add_match(
         Grounding,
         lambda exp: isinstance(exp.expression, Implication) and isinstance(
@@ -348,7 +364,14 @@ class TranslateGroundedProbDatalogToGraphicalModel(PatternWalker):
             rv_symb, extensional_vect_table_distrib(grounding)
         )
 
-    @add_match(Grounding, _is_ground_pfact_grounding)
+    @add_match(
+        Grounding,
+        lambda grounding: (
+            is_probabilistic_fact(grounding.expression) and len(
+                grounding.relation.value.columns
+            ) == (len(grounding.expression.consequent.body.args) + 1)
+        ),
+    )
     def ground_probfact_grounding(self, grounding):
         rv_symb = grounding.expression.consequent.body.functor
         self._add_grounding(rv_symb, grounding)
@@ -366,30 +389,6 @@ class TranslateGroundedProbDatalogToGraphicalModel(PatternWalker):
                 grounding.expression.consequent.probability, grounding
             ),
         )
-
-    @add_match(Grounding, lambda exp: is_existential_predicate(exp.expression))
-    def existensional_predicate(self, grounding):
-        rv_symb = grounding.expression.consequent.functor
-        self._add_grounding(rv_symb, grounding)
-        parent_groundings = {
-            predicate.functor: self.groundings[predicate.functor]
-            for predicate in
-            extract_logic_predicates(grounding.expression.antecedent)
-        }
-        free_vars = _get_free_var(grounding)
-        self._add_random_variable(
-            rv_symb,
-            var_marginalization_table_distribution(
-                grounding, parent_groundings, free_vars
-            )
-        )
-
-        parent_rv_symbs = {
-            pred.functor
-            for pred in
-            extract_logic_predicates(grounding.expression.antecedent)
-        }
-        self._add_edges(rv_symb, parent_rv_symbs)
 
     @add_match(Grounding)
     def rule_grounding(self, rule_grounding):

@@ -10,53 +10,50 @@ from ....probabilistic.expressions import ProbabilisticPredicate
 
 def test_facts():
     res = parser('A(3)')
-    assert res == Union((Fact(Symbol('A')(Constant(3.))),))
+    assert res == Union((Fact(Symbol('A')(Constant(3.))), ))
 
     res = parser('A("x")')
-    assert res == Union((Fact(Symbol('A')(Constant('x'))),))
+    assert res == Union((Fact(Symbol('A')(Constant('x'))), ))
 
     res = parser("A('x', 3)")
-    assert res == Union((Fact(Symbol('A')(Constant('x'), Constant(3.))),))
+    assert res == Union((Fact(Symbol('A')(Constant('x'), Constant(3.))), ))
 
-    res = parser(
-        'A("x", 3)\n'
-        'ans():-A(x, y)'
-    )
+    res = parser('A("x", 3)\n' 'ans():-A(x, y)')
     assert res == Union((
         Fact(Symbol('A')(Constant('x'), Constant(3.))),
         Implication(
             Symbol('ans')(),
-            Conjunction((
-                Symbol('A')(Symbol('x'), Symbol('y')),
-            ))
+            Conjunction((Symbol('A')(Symbol('x'), Symbol('y')), ))
         )
     ))
 
     res = parser('"john" is cat')
-    assert res == Union((Fact(Symbol('cat')(Constant("john"))),))
+    assert res == Union((Fact(Symbol('cat')(Constant("john"))), ))
 
-    res = parser('"john" is `http://owl#fact`')
-    assert res == Union((Fact(Symbol('http://owl#fact')(Constant("john"))),))
+    res = parser('"john" is `http://www.owl#fact`')
+    assert res == Union(
+        (Fact(Symbol('http://www.owl#fact')(Constant("john"))), )
+    )
 
     res = parser('"john" is "perceval"\'s mascot')
-    assert res == Union((
-        Fact(Symbol('mascot')(Constant("john"), Constant("perceval"))),
-    ))
+    assert res == Union(
+        (Fact(Symbol('mascot')(Constant("john"), Constant("perceval"))), )
+    )
 
     res = parser('"john" has 4 legs')
-    assert res == Union((
-        Fact(Symbol('legs')(Constant("john"), Constant(4.))),
-    ))
+    assert res == Union(
+        (Fact(Symbol('legs')(Constant("john"), Constant(4.))), )
+    )
 
     res = parser('"john" has 4 legs')
-    assert res == Union((
-        Fact(Symbol('legs')(Constant("john"), Constant(4.))),
-    ))
+    assert res == Union(
+        (Fact(Symbol('legs')(Constant("john"), Constant(4.))), )
+    )
 
     res = parser('"john" is below the "table"')
-    assert res == Union((
-        Fact(Symbol('below')(Constant("john"), Constant("table"))),
-    ))
+    assert res == Union(
+        (Fact(Symbol('below')(Constant("john"), Constant("table"))), )
+    )
 
 
 def test_rules():
@@ -68,22 +65,20 @@ def test_rules():
     y = Symbol('y')
     z = Symbol('z')
     res = parser('A(x):-B(x, y), C(3, z)')
-    assert res == Union((
-        Implication(A(x), Conjunction((B(x, y), C(Constant(3), z)))),
-    ))
+    assert res == Union(
+        (Implication(A(x), Conjunction((B(x, y), C(Constant(3), z)))), )
+    )
 
     res = parser('A(x):-~B(x)')
-    assert res == Union((
-        Implication(A(x), Conjunction((Negation(B(x)),))),
-    ))
+    assert res == Union((Implication(A(x), Conjunction((Negation(B(x)), ))), ))
 
     res = parser('A(x):-B(x, y), C(3, z), z == 4')
     assert res == Union((
         Implication(
             A(x),
-            Conjunction((
-                B(x, y), C(Constant(3), z), Constant(eq)(z, Constant(4.))
-            ))
+            Conjunction(
+                (B(x, y), C(Constant(3), z), Constant(eq)(z, Constant(4.)))
+            )
         ),
     ))
 
@@ -93,12 +88,9 @@ def test_rules():
             A(x),
             Conjunction((
                 B(
-                    Constant(add)(
-                        x,
-                        Constant(mul)(Constant(5.), Constant(2.))),
-                    y
-                ),
-                C(Constant(3), z), Constant(eq)(z, Constant(4.))
+                    Constant(add)
+                    (x, Constant(mul)(Constant(5.), Constant(2.))), y
+                ), C(Constant(3), z), Constant(eq)(z, Constant(4.))
             ))
         ),
     ))
@@ -108,11 +100,8 @@ def test_rules():
         Implication(
             A(x),
             Conjunction((
-                B(
-                    Constant(truediv)(x, Constant(2.)),
-                    y
-                ),
-                C(Constant(3), z), Constant(eq)(z, Constant(4.))
+                B(Constant(truediv)(x, Constant(2.)),
+                  y), C(Constant(3), z), Constant(eq)(z, Constant(4.))
             ))
         ),
     ))
@@ -121,10 +110,9 @@ def test_rules():
     assert res == Union((
         Implication(
             A(x),
-            Conjunction((
-                B(f(x), y),
-                C(Constant(3), z), Constant(eq)(z, Constant(4.))
-            ))
+            Conjunction(
+                (B(f(x), y), C(Constant(3), z), Constant(eq)(z, Constant(4.)))
+            )
         ),
     ))
 
@@ -132,12 +120,7 @@ def test_rules():
     assert res == Union((
         Implication(
             A(x),
-            Conjunction((
-                B(
-                    Constant(add)(x, Constant(-5.)),
-                    Constant("a")
-                ),
-            ))
+            Conjunction((B(Constant(add)(x, Constant(-5.)), Constant("a")), ))
         ),
     ))
 
@@ -147,10 +130,8 @@ def test_rules():
             A(x),
             Conjunction((
                 B(
-                    Constant(sub)(
-                        x,
-                        Constant(mul)(Constant(5.), Constant(2.))
-                    ),
+                    Constant(sub)
+                    (x, Constant(mul)(Constant(5.), Constant(2.))),
                     Constant(pow)(ExternalSymbol('y'), Constant(-2.))
                 ),
             ))
@@ -184,10 +165,12 @@ def test_nl_rules():
         ),
     ))
 
-    res = parser('''
+    res = parser(
+        '''
         x has y legs if x is a cat & y == 4.0
         or x has y legs if x is a bird and y == 2
-    ''')
+    '''
+    )
     assert res == Union((
         Implication(
             legs(x, y), Conjunction((cat(x), Constant(eq)(y, Constant(4.))))
@@ -207,8 +190,7 @@ def test_aggregation():
     res = parser('A(x, f(y)):-B(x, y)')
     assert res == Union((
         Implication(
-            A(x, AggregationApplication(f, (y,))),
-            Conjunction((B(x, y),))
+            A(x, AggregationApplication(f, (y, ))), Conjunction((B(x, y), ))
         ),
     ))
 
@@ -222,8 +204,7 @@ def test_aggregation_nsd():
     res = parser('x has f(y) A if B(x, y)')
     assert res == Union((
         Implication(
-            A(x, AggregationApplication(f, (y,))),
-            Conjunction((B(x, y),))
+            A(x, AggregationApplication(f, (y, ))), Conjunction((B(x, y), ))
         ),
     ))
 
@@ -234,8 +215,7 @@ def test_probabilistic_fact():
     res = parser('p::A(3)')
     assert res == Union((
         Implication(
-            ProbabilisticPredicate(p, A(Constant(3.))),
-            Constant(True)
+            ProbabilisticPredicate(p, A(Constant(3.))), Constant(True)
         ),
     ))
 
@@ -243,10 +223,8 @@ def test_probabilistic_fact():
     assert res == Union((
         Implication(
             ProbabilisticPredicate(
-                Constant(0.8),
-                A(Constant("a b"), Constant(3.))
-            ),
-            Constant(True)
+                Constant(0.8), A(Constant("a b"), Constant(3.))
+            ), Constant(True)
         ),
     ))
 
@@ -257,15 +235,15 @@ def test_probabilistic_fact_nsd():
     res = parser('with probability p "john" is cat')
     assert res == Union((
         Implication(
-            ProbabilisticPredicate(p, cat(Constant("john"))),
-            Constant(True)
+            ProbabilisticPredicate(p, cat(Constant("john"))), Constant(True)
         ),
     ))
 
     res = parser("with probability p 'john' is 'george''s cat")
     assert res == Union((
         Implication(
-            ProbabilisticPredicate(p, cat(Constant("john"), Constant("george"))),
-            Constant(True)
+            ProbabilisticPredicate(
+                p, cat(Constant("john"), Constant("george"))
+            ), Constant(True)
         ),
     ))

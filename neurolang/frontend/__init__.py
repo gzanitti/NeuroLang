@@ -3,10 +3,11 @@ from typing import AbstractSet, Any, Callable
 import numpy as np
 
 from .. import neurolang as nl
-from ..datalog import DatalogProgram
+from ..datalog.constraints_representation import DatalogConstraintsProgram
 from ..datalog.aggregation import Chase, DatalogWithAggregationMixin
-from ..expression_walker import (Constant, ExpressionBasicEvaluator,
-                                 FunctionApplication, Symbol, add_match)
+from ..expression_walker import (
+    Constant, ExpressionBasicEvaluator, FunctionApplication, Symbol, add_match
+)
 from ..region_solver import RegionSolver
 from ..regions import ExplicitVBR
 from ..solver import FirstOrderLogicSolver
@@ -16,8 +17,8 @@ from .query_resolution import QueryBuilderFirstOrder
 from .query_resolution_datalog import QueryBuilderDatalog
 
 __all__ = [
-    'NeurolangDL', 'RegionFrontend',
-    'QueryBuilderDatalog', 'QueryBuilderFirstOrder'
+    'NeurolangDL', 'RegionFrontend', 'QueryBuilderDatalog',
+    'QueryBuilderFirstOrder'
 ]
 
 
@@ -27,14 +28,11 @@ def function_isin(element: Any, set_: AbstractSet) -> bool:
 
 
 class RegionFrontendSolver(
-        ExtensionalDatabaseSolver,
-        RegionSolver,
-        FirstOrderLogicSolver
+    ExtensionalDatabaseSolver, RegionSolver, FirstOrderLogicSolver
 ):
     @add_match(
         FunctionApplication(
-            Constant(function_isin),
-            (Constant, Constant[AbstractSet])
+            Constant(function_isin), (Constant, Constant[AbstractSet])
         )
     )
     def rewrite_isin(self, expression):
@@ -43,7 +41,6 @@ class RegionFrontendSolver(
 
 
 class RegionFrontend(QueryBuilderFirstOrder):
-
     def __init__(self, solver=None):
         if solver is None:
             solver = RegionFrontendSolver()
@@ -72,7 +69,6 @@ class RegionFrontend(QueryBuilderFirstOrder):
 
 
 class NeurolangDL(QueryBuilderDatalog):
-
     def __init__(self, solver=None):
         if solver is None:
             solver = RegionFrontendDatalogSolver()
@@ -80,9 +76,7 @@ class NeurolangDL(QueryBuilderDatalog):
 
 
 class RegionFrontendDatalogSolver(
-        RegionSolver,
-        DatalogWithAggregationMixin,
-        DatalogProgram,
-        ExpressionBasicEvaluator
+    RegionSolver, DatalogWithAggregationMixin, DatalogConstraintsProgram,
+    ExpressionBasicEvaluator
 ):
     pass

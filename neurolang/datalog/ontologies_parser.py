@@ -94,7 +94,6 @@ class OntologiesParser():
         self._load_domain()
         self._load_properties()
 
-
         self.neurolangDL.load_constraints(self.eb)
         return self.neurolangDL
 

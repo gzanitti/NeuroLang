@@ -8,7 +8,6 @@ from ...datalog.aggregation import AggregationApplication
 from ...expressions import Expression, FunctionApplication
 from . import DatalogSemantics as DatalogClassicSemantics
 
-
 GRAMMAR = u"""
     @@grammar::Datalog
     @@parseinfo :: True
@@ -102,7 +101,7 @@ GRAMMAR = u"""
             | ext_identifier ;
 
     identifier = /[a-zA-Z_][a-zA-Z0-9_]*/
-               | '`'@:?"[0-9a-zA-Z/#%:-]+"'`';
+               | '`'@:?"[0-9a-zA-Z/#._%:-]+"'`';
 
     comparison_operator = '==' | '<' | '<=' | '>=' | '>' | '!=' ;
 
@@ -121,7 +120,6 @@ GRAMMAR = u"""
     newline = {['\\u000C'] ['\\r'] '\\n'}+ ;
 """
 
-
 OPERATOR = {
     '+': add,
     '-': sub,
@@ -136,7 +134,6 @@ OPERATOR = {
     '/': truediv
 }
 
-
 COMPILED_GRAMMAR = tatsu.compile(GRAMMAR)
 
 
@@ -150,10 +147,7 @@ class DatalogSemantics(DatalogClassicSemantics):
                 arguments = []
                 for arg in ast['arguments']:
                     if isinstance(arg, FunctionApplication):
-                        arg = AggregationApplication(
-                            arg.functor,
-                            arg.args
-                        )
+                        arg = AggregationApplication(arg.functor, arg.args)
                     arguments.append(arg)
                 ast = ast['predicate'](*arguments)
             else:
@@ -180,6 +174,7 @@ class DatalogSemantics(DatalogClassicSemantics):
 
 def parser(code, locals=None, globals=None):
     return tatsu.parse(
-        COMPILED_GRAMMAR, code.strip(),
+        COMPILED_GRAMMAR,
+        code.strip(),
         semantics=DatalogSemantics(locals=locals, globals=globals)
     )

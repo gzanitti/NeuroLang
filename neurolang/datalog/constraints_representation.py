@@ -9,7 +9,7 @@ sets and has support for constraints.
 from .basic_representation import DatalogProgram
 
 
-class DatalogConstraintsProgram(DatalogProgram):
+class DatalogConstraintsProgramMixin():
 
     protected_keywords = set({'__constraints__'})
 
@@ -18,3 +18,9 @@ class DatalogConstraintsProgram(DatalogProgram):
 
     def get_constraints(self):
         return self.symbol_table['__constraints__']
+
+
+class DatalogConstraintsProgram(
+    DatalogConstraintsProgramMixin, DatalogProgram
+):
+    pass

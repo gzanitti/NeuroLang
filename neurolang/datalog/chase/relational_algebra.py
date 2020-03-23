@@ -5,13 +5,15 @@ from typing import AbstractSet, Callable, Sequence
 
 from ...expressions import Constant, Definition, FunctionApplication, Symbol
 from ...logic.unification import apply_substitution_arguments
-from ...relational_algebra import (ColumnInt, Product, Projection,
-                                   RelationalAlgebraOptimiser,
-                                   RelationalAlgebraSolver, Selection, eq_)
+from ...relational_algebra import (
+    ColumnInt, Product, Projection, RelationalAlgebraOptimiser,
+    RelationalAlgebraSolver, Selection, eq_
+)
 from ...type_system import is_leq_informative
 from ...utils import NamedRelationalAlgebraFrozenSet
-from ..expression_processing import (extract_logic_free_variables,
-                                     extract_logic_predicates)
+from ..expression_processing import (
+    extract_logic_free_variables, extract_logic_predicates
+)
 from ..expressions import Conjunction, Implication, Negation
 from ..instance import MapInstance
 from ..translate_to_named_ra import TranslateToNamedRA
@@ -31,10 +33,10 @@ class ChaseRelationalAlgebraPlusCeriMixin:
        San Francisco, CA, USA, 1986;
        http://dl.acm.org/citation.cfm?id=645913.671468), VLDB ’86, pp. 395–402.
     """
+
     def obtain_substitutions(self, args_to_project, rule_predicates_iterator):
         ra_code, projected_var_names = self.translate_to_ra_plus(
-            args_to_project,
-            rule_predicates_iterator
+            args_to_project, rule_predicates_iterator
         )
         ra_code_opt = RelationalAlgebraOptimiser().walk(ra_code)
         if not isinstance(ra_code_opt, Constant) or len(ra_code_opt.value) > 0:
@@ -46,11 +48,7 @@ class ChaseRelationalAlgebraPlusCeriMixin:
 
         return substitutions
 
-    def translate_to_ra_plus(
-        self,
-        args_to_project,
-        rule_predicates_iterator
-    ):
+    def translate_to_ra_plus(self, args_to_project, rule_predicates_iterator):
         self.seen_vars = dict()
         self.selections = []
         self.projections = tuple()
@@ -63,7 +61,7 @@ class ChaseRelationalAlgebraPlusCeriMixin:
             new_ra_expression = self.translate_predicate(
                 pred_ra, column, args_to_project
             )
-            new_ra_expressions += (new_ra_expression,)
+            new_ra_expressions += (new_ra_expression, )
             column += ra_expression_arity
         if len(new_ra_expressions) > 0:
             if len(new_ra_expressions) == 1:
@@ -97,8 +95,8 @@ class ChaseRelationalAlgebraPlusCeriMixin:
         return new_ra_expression
 
     def translate_predicate_process_argument(
-        self, arg, local_selections, local_column,
-        global_column, args_to_project
+        self, arg, local_selections, local_column, global_column,
+        args_to_project
     ):
         if isinstance(arg, Constant):
             local_selections.append((local_column, arg))
@@ -115,7 +113,7 @@ class ChaseRelationalAlgebraPlusCeriMixin:
         else:
             if arg in args_to_project:
                 self.projected_var_names[arg] = len(self.projections)
-                self.projections += (global_column,)
+                self.projections += (global_column, )
             self.seen_vars[arg] = global_column
 
     def compute_substitutions(self, result, projected_var_names):
@@ -138,6 +136,7 @@ class ChaseNamedRelationalAlgebraMixin:
       (Addison Wesley, 1995), Addison-Wesley.
 
     """
+
     def chase_step(self, instance, rule, restriction_instance=None):
         if restriction_instance is None:
             restriction_instance = MapInstance()
@@ -158,14 +157,14 @@ class ChaseNamedRelationalAlgebraMixin:
             rule_predicates_iterator, instance, restriction_instance
         )
 
-        if consequent.functor in instance:
-            substitutions = self.eliminate_already_computed(
-                consequent, instance, substitutions
-            )
-        if consequent.functor in restriction_instance:
-            substitutions = self.eliminate_already_computed(
-                consequent, restriction_instance, substitutions
-            )
+        #if consequent.functor in instance:
+        #    substitutions = self.eliminate_already_computed(
+        #        consequent, instance, substitutions
+        #    )
+        #if consequent.functor in restriction_instance:
+        #    substitutions = self.eliminate_already_computed(
+        #        consequent, restriction_instance, substitutions
+        #    )
         substitutions = self.evaluate_builtins(
             builtin_predicates, substitutions
         )
@@ -183,7 +182,7 @@ class ChaseNamedRelationalAlgebraMixin:
                 fresh = Symbol[arg.type].fresh()
                 new_equalities.append(eq_(fresh, arg))
                 arg = fresh
-            new_args += (arg,)
+            new_args += (arg, )
         if len(new_equalities) > 0:
             rule = self.rewrite_rule_consequent_constants_to_equalities(
                 rule, new_args, new_equalities
@@ -198,10 +197,8 @@ class ChaseNamedRelationalAlgebraMixin:
         if isinstance(rule.antecedent, Conjunction):
             antecedent_formulas = rule.antecedent.formulas
         else:
-            antecedent_formulas = (rule.antecedent,)
-        antecedent = Conjunction(
-            antecedent_formulas + tuple(new_equalities)
-        )
+            antecedent_formulas = (rule.antecedent, )
+        antecedent = Conjunction(antecedent_formulas + tuple(new_equalities))
         rule = Implication(consequent, antecedent)
         return rule
 
@@ -210,21 +207,19 @@ class ChaseNamedRelationalAlgebraMixin:
             return substitutions
 
         args = tuple(
-            arg.name for arg in consequent.args
-            if isinstance(arg, Symbol)
+            arg.name for arg in consequent.args if isinstance(arg, Symbol)
         )
         already_computed = NamedRAFSTupleIterAdapter(
-            args,
-            instance[consequent.functor].value
+            args, instance[consequent.functor].value
         )
         if set(substitutions.columns).issuperset(already_computed.columns):
             already_computed = substitutions.naturaljoin(already_computed)
-        substitutions = substitutions - already_computed
+
+        #just to avoid the error without compromise the performance to much
+        if len(substitutions.columns) == len(already_computed.columns):
+            substitutions = substitutions - already_computed
         if not isinstance(substitutions, NamedRAFSTupleIterAdapter):
-            substitutions = (
-                sorted(substitutions.columns),
-                substitutions
-            )
+            substitutions = (sorted(substitutions.columns), substitutions)
         return substitutions
 
     def obtain_substitutions(
@@ -248,8 +243,7 @@ class ChaseNamedRelationalAlgebraMixin:
 
         result_value = result.value
         substitutions = NamedRAFSTupleIterAdapter(
-            result_value.columns,
-            result_value
+            result_value.columns, result_value
         )
 
         return substitutions
@@ -291,13 +285,11 @@ class ChaseNamedRelationalAlgebraMixin:
                 edb_idb_predicates.append(predicate)
                 cq_free_vars |= extract_logic_free_variables(predicate)
             elif functor in self.builtins:
-                builtin_predicates.append(
-                    (predicate, self.builtins[functor])
-                )
+                builtin_predicates.append((predicate, self.builtins[functor]))
             elif isinstance(functor, Constant):
                 if is_negation:
                     predicate = FunctionApplication(
-                        invert, (predicate.formula,)
+                        invert, (predicate.formula, )
                     )
                 builtin_predicates.append((predicate, functor))
             else:
@@ -307,15 +299,15 @@ class ChaseNamedRelationalAlgebraMixin:
         return builtin_predicates, edb_idb_predicates, cq_free_vars
 
     def process_builtins(
-        self, builtin_predicates,
-        edb_idb_predicates, cq_free_vars
+        self, builtin_predicates, edb_idb_predicates, cq_free_vars
     ):
         new_builtin_predicates = []
         builtin_vectorized_predicates = []
         for pred, functor in builtin_predicates:
             if (
-                ChaseNamedRelationalAlgebraMixin.
-                is_eq_expressible_as_ra(functor, pred, cq_free_vars)
+                ChaseNamedRelationalAlgebraMixin.is_eq_expressible_as_ra(
+                    functor, pred, cq_free_vars
+                )
             ):
                 edb_idb_predicates.append(pred)
             elif (
@@ -338,11 +330,9 @@ class ChaseNamedRelationalAlgebraMixin:
 
         return (
             functor == eq_ and
-            not any(isinstance(arg, Definition) for arg in pred.args) and
-            any(
+            not any(isinstance(arg, Definition) for arg in pred.args) and any(
                 isinstance(arg, Constant) or
-                (not is_negation and arg in cq_free_vars)
-                for arg in pred.args
+                (not is_negation and arg in cq_free_vars) for arg in pred.args
             )
         )
 
@@ -360,13 +350,10 @@ class ChaseNamedRelationalAlgebraMixin:
         else:
             tuples = [
                 tuple(
-                    a.value for a in
-                    apply_substitution_arguments(
+                    a.value for a in apply_substitution_arguments(
                         rule.consequent.args, substitution
                     )
-                )
-                for substitution in substitutions
-                if len(substitutions) > 0
+                ) for substitution in substitutions if len(substitutions) > 0
             ]
             new_tuples = self.datalog_program.new_set(tuples)
 
@@ -383,10 +370,7 @@ class NamedRAFSTupleIterAdapter(NamedRelationalAlgebraFrozenSet):
 
     @property
     def row_types(self):
-        if (
-            len(self._row_types) == 0 and
-            self.arity > 0 and len(self) > 0
-        ):
+        if (len(self._row_types) == 0 and self.arity > 0 and len(self) > 0):
             element = next(super().__iter__())
             self._row_types = {
                 c: Constant(getattr(element, c)).type
@@ -400,9 +384,7 @@ class NamedRAFSTupleIterAdapter(NamedRelationalAlgebraFrozenSet):
             row_types = self.row_types
             for row in super().__iter__():
                 yield {
-                    f: Constant[row_types[f]](
-                        v, verify_type=False
-                    )
+                    f: Constant[row_types[f]](v, verify_type=False)
                     for f, v in zip(row._fields, row)
                 }
         else:
