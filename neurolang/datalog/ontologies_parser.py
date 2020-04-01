@@ -12,13 +12,17 @@ RI_ = RightImplication
 
 
 class OntologiesParser():
-    def __init__(self, paths, namespaces, load_format='xml'):
+    def __init__(self, paths, namespaces, load_format='xml', graph=None):
         self.namespaces_dic = None
         self.owl_dic = None
-        if isinstance(paths, list):
-            self._load_ontology(paths, namespaces, load_format)
+        if graph is None:
+            if isinstance(paths, list):
+                self._load_ontology(paths, namespaces, load_format)
+            else:
+                self._load_ontology([paths], [namespaces], load_format)
         else:
-            self._load_ontology([paths], [namespaces], load_format)
+            self.df = graph
+            self._process_properties(namespaces)
 
     def _load_ontology(self, paths, namespaces, load_format):
         self._create_graph(paths, load_format)
