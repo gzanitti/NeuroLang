@@ -9,8 +9,6 @@ class LogicOperator(Definition):
 class UnaryLogicOperator(LogicOperator):
     pass
 
-class BinaryLogicOperator(LogicOperator):
-    pass
 
 class NaryLogicOperator(LogicOperator):
     pass
@@ -25,9 +23,7 @@ class Conjunction(NaryLogicOperator):
             self._symbols |= formula._symbols
 
     def __repr__(self):
-        return '\u22C0(' + ', '.join(
-            repr(e) for e in self.formulas
-        ) + ')'
+        return "\u22C0(" + ", ".join(repr(e) for e in self.formulas) + ")"
 
 
 class Disjunction(NaryLogicOperator):
@@ -46,13 +42,11 @@ class Disjunction(NaryLogicOperator):
             chars += len(repr_formulas[-1])
 
         if chars < 30:
-            join_text = ', '
+            join_text = ", "
         else:
-            join_text = ',\n'
+            join_text = ",\n"
 
-        return '\u22C1(' + join_text.join(
-            repr(e) for e in self.formulas
-        ) + ')'
+        return "\u22C1(" + join_text.join(repr(e) for e in self.formulas) + ")"
 
 
 class Union(NaryLogicOperator):
@@ -71,13 +65,11 @@ class Union(NaryLogicOperator):
             chars += len(repr_formulas[-1])
 
         if chars < 30:
-            join_text = ', '
+            join_text = ", "
         else:
-            join_text = ',\n'
+            join_text = ",\n"
 
-        return '\u222A(' + join_text.join(
-            repr(e) for e in self.formulas
-        ) + ')'
+        return "\u222A(" + join_text.join(repr(e) for e in self.formulas) + ")"
 
 
 class Negation(UnaryLogicOperator):
@@ -86,10 +78,10 @@ class Negation(UnaryLogicOperator):
         self._symbols |= formula._symbols
 
     def __repr__(self):
-        return f'\u00AC{self.formula}'
+        return f"\u00AC{self.formula}"
 
 
-class Implication(BinaryLogicOperator):
+class Implication(LogicOperator):
     """Expression of the form `P(x) \u2190 Q(x)`"""
 
     def __init__(self, consequent, antecedent):
@@ -98,7 +90,7 @@ class Implication(BinaryLogicOperator):
         self._symbols = consequent._symbols | antecedent._symbols
 
     def __repr__(self):
-        return 'Implication{{{} \u2190 {}}}'.format(
+        return "Implication{{{} \u2190 {}}}".format(
             repr(self.consequent), repr(self.antecedent)
         )
 
@@ -112,28 +104,26 @@ class ExistentialPredicate(Quantifier):
 
         if not isinstance(head, Symbol):
             raise NeuroLangException(
-                'A symbol should be provided for the '
-                'existential quantifier expression'
+                "A symbol should be provided for the "
+                "existential quantifier expression"
             )
         if not isinstance(body, Definition):
             raise NeuroLangException(
-                'A function application over '
-                'predicates should be associated to the quantifier'
+                "A function application over "
+                "predicates should be associated to the quantifier"
             )
 
         if head not in body._symbols:
             raise NeuroLangException(
-                'Symbol should be a free '
-                'variable on the predicate'
+                "Symbol should be a free " "variable on the predicate"
             )
         self.head = head
         self.body = body
         self._symbols = body._symbols - {head}
 
     def __repr__(self):
-        r = (
-            u'\u2203{{{}: {} st {}}}'
-            .format(self.head, self.__type_repr__, self.body)
+        r = "\u2203{{{}: {} st {}}}".format(
+            self.head, self.__type_repr__, self.body
         )
         return r
 
@@ -143,28 +133,26 @@ class UniversalPredicate(Quantifier):
 
         if not isinstance(head, Symbol):
             raise NeuroLangException(
-                'A symbol should be provided for the '
-                'universal quantifier expression'
+                "A symbol should be provided for the "
+                "universal quantifier expression"
             )
         if not isinstance(body, Definition):
             raise NeuroLangException(
-                'A function application over '
-                'predicates should be associated to the quantifier'
+                "A function application over "
+                "predicates should be associated to the quantifier"
             )
 
         if head not in body._symbols:
             raise NeuroLangException(
-                'Symbol should be a free '
-                'variable on the predicate'
+                "Symbol should be a free " "variable on the predicate"
             )
         self.head = head
         self.body = body
         self._symbols = body._symbols - {head}
 
     def __repr__(self):
-        r = (
-            u'\u2200{{{}: {} st {}}}'
-            .format(self.head, self.__type_repr__, self.body)
+        r = "\u2200{{{}: {} st {}}}".format(
+            self.head, self.__type_repr__, self.body
         )
         return r
 
