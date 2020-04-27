@@ -183,6 +183,7 @@ class OntologyRewriter:
     def _get_term(self, q, sigma_con):
         q_args = []
         if isinstance(q, NaryLogicOperator):
+            print(q)
             q_args = [
                 formula
                 for formula in q.formulas
