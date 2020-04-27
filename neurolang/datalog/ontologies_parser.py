@@ -489,6 +489,18 @@ class OntologyParser:
 
         return constraints
 
+    def _process_someValuesFrom(self, cut_graph):
+        parsed_prop, restricted_node, value = self._parse_restriction_nodes(
+            cut_graph
+        )
+
+        warnings.warn(
+            f"""The restriction someValuesFrom has not
+            been parsed for {parsed_restrictions}"""
+        )
+
+        return Union(())
+
     def _parse_restriction_nodes(self, cut_graph):
         """
         Given the list of nodes associated with a restriction,
