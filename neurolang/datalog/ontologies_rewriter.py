@@ -43,7 +43,6 @@ class OntologyRewriter:
                     continue
                 q0 = q[0]
                 for sigma in sigma_free_vars:
-                    print(sigma)
                     Q_rew = self.rewriting_step(q0, sigma, rename_count, Q_rew)
                     Q_rew = self.factorization_step(q0, sigma, Q_rew)
 
@@ -63,7 +62,10 @@ class OntologyRewriter:
         return sigma_free_vars
 
     def rewriting_step(self, q0, sigma, rename_count, Q_rew):
+        print(q0)
         body_q = q0.antecedent
+        print(body_q)
+        print("_" * 10)
         S_applicable = self._get_applicable(sigma, body_q)
         for S in S_applicable:
             rename_count += 1
