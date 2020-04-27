@@ -43,6 +43,7 @@ class OntologyRewriter:
                     continue
                 q0 = q[0]
                 for sigma in sigma_free_vars:
+                    print(sigma)
                     Q_rew = self.rewriting_step(q0, sigma, rename_count, Q_rew)
                     Q_rew = self.factorization_step(q0, sigma, Q_rew)
 
@@ -183,7 +184,6 @@ class OntologyRewriter:
     def _get_term(self, q, sigma_con):
         q_args = []
         if isinstance(q, NaryLogicOperator):
-            print(q)
             q_args = [
                 formula
                 for formula in q.formulas
