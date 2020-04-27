@@ -200,7 +200,7 @@ class OntologyRewriter:
         ) and self._not_in_existential(q, S, sigma)
 
     def _is_factorizable(self, S, pos):
-        return any(most_general_unifier(term, S[0]) for term in S) or pos
+        return all(most_general_unifier(term, S[0]) for term in S) or pos
 
     def _unifies(self, S, sigma):
         return all(most_general_unifier(term, sigma) for term in S)
