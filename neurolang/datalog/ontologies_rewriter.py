@@ -8,6 +8,7 @@ from ..logic import Constant, Implication, NaryLogicOperator
 from ..logic.expression_processing import ExtractFreeVariablesWalker
 from ..logic.unification import apply_substitution, most_general_unifier
 from .ontologies_parser import RightImplication
+from ..logic.transformations import CollapseConjunctions
 
 
 class ExtractFreeVariablesRightImplicationWalker(ExtractFreeVariablesWalker):
@@ -62,10 +63,7 @@ class OntologyRewriter:
         return sigma_free_vars
 
     def rewriting_step(self, q0, sigma, rename_count, Q_rew):
-        print(q0)
         body_q = q0.antecedent
-        print(body_q)
-        print("_" * 10)
         S_applicable = self._get_applicable(sigma, body_q)
         for S in S_applicable:
             rename_count += 1
@@ -267,6 +265,7 @@ class OntologyRewriter:
         replace = dict({S: sigma_ant})
         rsw = ReplaceExpressionWalker(replace)
         sigma_ant = rsw.walk(q.antecedent)
+        sigma_ant = CollapseConjunctions().walk(sigma_ant)
 
         q_cons = apply_substitution(q.consequent, qS[0])
 

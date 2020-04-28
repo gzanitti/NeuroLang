@@ -1,15 +1,15 @@
-import pytest
-
-from neurolang.logic import (
-    ExistentialPredicate, Implication, FunctionApplication
+from ... import expression_walker as ew
+from ...expressions import Constant, ExpressionBlock, Symbol
+from ...logic import (
+    ExistentialPredicate,
+    FunctionApplication,
+    Implication,
+    Conjunction,
 )
-from neurolang.expressions import Symbol, Constant, ExpressionBlock
-from neurolang.datalog.ontologies_rewriter import (
-    RightImplication, OntologyRewriter
-)
-from neurolang.datalog.expressions import TranslateToLogic
-from neurolang import expression_walker as ew
-from neurolang.datalog.aggregation import DatalogWithAggregationMixin
+from ..aggregation import DatalogWithAggregationMixin
+from ..expressions import TranslateToLogic
+from ..ontologies_parser import RightImplication
+from ..ontologies_rewriter import OntologyRewriter
 
 S_ = Symbol
 C_ = Constant
@@ -19,6 +19,7 @@ FA_ = FunctionApplication
 I_ = Implication
 RI_ = RightImplication
 
+
 class DatalogTranslator(
     TranslateToLogic, ew.IdentityWalker, DatalogWithAggregationMixin
 ):
@@ -26,23 +27,23 @@ class DatalogTranslator(
 
 
 def test_normal_rewriting_step():
-    project = S_('project')
-    inArea = S_('inArea')
-    hasCollaborator = S_('hasCollaborator')
-    p = S_('p')
+    project = S_("project")
+    inArea = S_("inArea")
+    hasCollaborator = S_("hasCollaborator")
+    p = S_("p")
 
-    x = S_('x')
-    y = S_('y')
-    z = S_('z')
-    a = S_('a')
-    b = S_('b')
-    db = C_('db')
+    x = S_("x")
+    y = S_("y")
+    z = S_("z")
+    a = S_("a")
+    b = S_("b")
+    db = C_("db")
 
     sigma = RI_(project(x) & inArea(x, y), hasCollaborator(z, y, x))
     q = I_(p(b), hasCollaborator(a, db, b))
 
-    qB = EB_((q, ))
-    sigmaB = EB_((sigma, ))
+    qB = EB_((q,))
+    sigmaB = EB_((sigma,))
 
     dt = DatalogTranslator()
     qB = dt.walk(qB)
@@ -61,25 +62,25 @@ def test_normal_rewriting_step():
 
 
 def test_more_than_one_free_variable():
-    project = S_('project')
-    inArea = S_('inArea')
-    hasCollaborator = S_('hasCollaborator')
-    p = S_('p')
+    project = S_("project")
+    inArea = S_("inArea")
+    hasCollaborator = S_("hasCollaborator")
+    p = S_("p")
 
-    w = S_('w')
-    x = S_('x')
-    y = S_('y')
-    z = S_('z')
-    a = S_('a')
-    b = S_('b')
-    c = S_('c')
-    db = C_('db')
+    w = S_("w")
+    x = S_("x")
+    y = S_("y")
+    z = S_("z")
+    a = S_("a")
+    b = S_("b")
+    c = S_("c")
+    db = C_("db")
 
     sigma = RI_(project(x) & inArea(x, y), hasCollaborator(w, z, y, x))
     q = I_(p(b), hasCollaborator(c, a, db, b))
 
-    qB = EB_((q, ))
-    sigmaB = EB_((sigma, ))
+    qB = EB_((q,))
+    sigmaB = EB_((sigma,))
 
     dt = DatalogTranslator()
     qB = dt.walk(qB)
@@ -98,23 +99,23 @@ def test_more_than_one_free_variable():
 
 
 def test_unsound_rewriting_step_constant():
-    project = S_('project')
-    inArea = S_('inArea')
-    hasCollaborator = S_('hasCollaborator')
-    p = S_('p')
+    project = S_("project")
+    inArea = S_("inArea")
+    hasCollaborator = S_("hasCollaborator")
+    p = S_("p")
 
-    x = S_('x')
-    y = S_('y')
-    z = S_('z')
-    b = S_('b')
-    db = C_('db')
-    c = C_('c')
+    x = S_("x")
+    y = S_("y")
+    z = S_("z")
+    b = S_("b")
+    db = C_("db")
+    c = C_("c")
 
     sigma = RI_(project(x) & inArea(x, y), hasCollaborator(z, y, x))
     q = I_(p(b), hasCollaborator(c, db, b))
 
-    qB = EB_((q, ))
-    sigmaB = EB_((sigma, ))
+    qB = EB_((q,))
+    sigmaB = EB_((sigma,))
 
     dt = DatalogTranslator()
     qB = dt.walk(qB)
@@ -129,22 +130,22 @@ def test_unsound_rewriting_step_constant():
 
 
 def test_unsound_rewriting_step_shared():
-    project = S_('project')
-    inArea = S_('inArea')
-    hasCollaborator = S_('hasCollaborator')
-    p = S_('p')
+    project = S_("project")
+    inArea = S_("inArea")
+    hasCollaborator = S_("hasCollaborator")
+    p = S_("p")
 
-    x = S_('x')
-    y = S_('y')
-    z = S_('z')
-    b = S_('b')
-    db = C_('db')
+    x = S_("x")
+    y = S_("y")
+    z = S_("z")
+    b = S_("b")
+    db = C_("db")
 
     sigma = RI_(project(x) & inArea(x, y), hasCollaborator(z, y, x))
     q = I_(p(b), hasCollaborator(b, db, b))
 
-    qB = EB_((q, ))
-    sigmaB = EB_((sigma, ))
+    qB = EB_((q,))
+    sigmaB = EB_((sigma,))
 
     dt = DatalogTranslator()
     qB = dt.walk(qB)
@@ -159,25 +160,25 @@ def test_unsound_rewriting_step_shared():
 
 
 def test_outside_variable():
-    s = S_('s')
-    r = S_('r')
-    t = S_('t')
-    p = S_('p')
+    s = S_("s")
+    r = S_("r")
+    t = S_("t")
+    p = S_("p")
 
-    x = S_('x')
-    y = S_('y')
-    z = S_('z')
+    x = S_("x")
+    y = S_("y")
+    z = S_("z")
 
-    a = S_('a')
-    b = S_('b')
-    c = S_('c')
-    e = S_('e')
+    a = S_("a")
+    b = S_("b")
+    c = S_("c")
+    e = S_("e")
 
     sigma = RI_(s(x) & r(x, y), t(x, y, z))
     q2 = I_(p(a), s(c) & t(a, b, c) & t(a, e, c))
 
-    qB = EB_((q2, ))
-    sigmaB = EB_((sigma, ))
+    qB = EB_((q2,))
+    sigmaB = EB_((sigma,))
 
     dt = DatalogTranslator()
     qB = dt.walk(qB)
@@ -187,34 +188,31 @@ def test_outside_variable():
     rewrite = orw.Xrewrite()
 
     assert len(rewrite) == 1
-    factorized = [x for x in rewrite if x[1] == 'f']
+    factorized = [x for x in rewrite if x[1] == "f"]
     assert len(factorized) == 0
 
 
 def test_example_4_3():
-    project = S_('project')
-    inArea = S_('inArea')
-    hasCollaborator = S_('hasCollaborator')
-    collaborator = S_('collaborator')
-    p = S_('p')
+    project = S_("project")
+    inArea = S_("inArea")
+    hasCollaborator = S_("hasCollaborator")
+    collaborator = S_("collaborator")
+    p = S_("p")
 
-    x = S_('x')
-    y = S_('y')
-    z = S_('z')
-    a = S_('a')
-    b = S_('b')
-    c = S_('c')
+    x = S_("x")
+    y = S_("y")
+    z = S_("z")
+    a = S_("a")
+    b = S_("b")
+    c = S_("c")
 
     sigma1 = RI_(project(x) & inArea(x, y), hasCollaborator(z, y, x))
     sigma2 = RI_(hasCollaborator(x, y, z), collaborator(x))
 
     q = I_(p(b, c), hasCollaborator(a, b, c) & collaborator(a))
 
-    qB = EB_((q, ))
-    sigmaB = EB_((
-        sigma1,
-        sigma2,
-    ))
+    qB = EB_((q,))
+    sigmaB = EB_((sigma1, sigma2))
 
     dt = DatalogTranslator()
     qB = dt.walk(qB)
@@ -225,33 +223,79 @@ def test_example_4_3():
 
     assert len(rewrite) == 4
 
-def test_rewriter_without_symbols():
-    from neurolang.datalog.ontologies_parser import OntologiesParser
 
-    from neurolang.datalog.constraints_representation import DatalogConstraintsProgram
-    from neurolang.expression_walker import ExpressionBasicEvaluator
+def test_infinite_walker():
+    from rdflib import RDFS, RDF, OWL
+    from ...expression_walker import ReplaceExpressionWalker
+    from ...logic.transformations import CollapseConjunctions
+
+    subClassOf = Symbol(str(RDFS.subClassOf))
+    rest = Symbol(str(OWL.rest))
+    reg = Symbol("reg")
+
+    x1 = Symbol("x1")
+    y1 = Symbol("y1")
+    x = Symbol("x")
+    y = Symbol("y")
+
+    sigma_ant = Conjunction((subClassOf(x1, y1), rest(x1, y1), rest(y1, y1)))
+    S = subClassOf(x1, y1)
+    q_ant = Conjunction((subClassOf(x1, y1), rest(y, x1), rest(x, y1), reg(x)))
+
+    replace = dict({S: sigma_ant})
+    rsw = ReplaceExpressionWalker(replace)
+    sigma_rep = rsw.walk(q_ant)
+    sigma_rep = CollapseConjunctions().walk(sigma_rep)
+
+    expected = Conjunction((sigma_ant, rest(y, x1), rest(x, y1), reg(x)))
+    expected = CollapseConjunctions().walk(expected)
+
+    assert sigma_rep == expected
+
+
+def test_rewriter_without_symbols():
+    from ..ontologies_parser import OntologyParser
+    from ..constraints_representation import DatalogConstraintsProgram
+    from ...expression_walker import ExpressionBasicEvaluator
+    from ..expressions import TranslateToLogic
+    from ... import expression_walker as ew
+    from ..aggregation import DatalogWithAggregationMixin
+    from rdflib import RDFS
+
+    class DatalogTranslator(
+        TranslateToLogic, ew.IdentityWalker, DatalogWithAggregationMixin
+    ):
+        pass
 
     class Datalog(DatalogConstraintsProgram, ExpressionBasicEvaluator):
         pass
 
-    paths = ['./neurolang/datalog/tests/neurofma_fma3.0.owl']
-    namespaces = ['http://sig.biostr.washington.edu/fma3.0']
-    onto = OntologiesParser(paths, namespaces)
-    dl = Datalog()
-    datalog_program = onto.parse_ontology(dl)
+    paths = [
+        "/Users/gzanitti/Projects/INRIA/ontologies_paper/data/neurofma_fma3.0.owl"
+    ]
+    onto = OntologyParser(paths)
+    d_pred, u_constraints = onto.parse_ontology()
+    id_ = Symbol("id_")
+    reg = Symbol("reg")
+    sub = Symbol("sub")
+    x = S_("x")
+    y = S_("y")
+    label = Symbol(str(RDFS.label))
+    subClassOf = Symbol(str(RDFS.subClassOf))
+    region = Symbol("region")
+    regional_part = Symbol(
+        "http://sig.biostr.washington.edu/fma3.0#regional_part_of"
+    )
 
-
-    res = Symbol('res')
-    x = S_('x')
-    y = S_('y')
-    regional_part = Symbol('http://sig.biostr.washington.edu/fma3.0#regional_part_of')
-    label = Symbol('http://www.w3.org/2000/01/rdf-schema#label')
-
-    imps = (Implication(res(y), label(y, C_('Frontal Lobe'))),)
-    imps += (Implication(res(x), regional_part(x, y)),)
+    imps = tuple()
+    imps += (Implication(id_(y), label(y, C_("Temporal lobe"))),)
+    imps += (Implication(reg(x), regional_part(x, y) & id_(y)),)
+    imps += (Implication(sub(y), subClassOf(y, x) & reg(x)),)
 
     qB = ExpressionBlock(imps)
+    dt = DatalogTranslator()
+    qB2 = dt.walk(qB)
 
-    orw = OntologyRewriter(qB, datalog_program.get_constraints())
+    orw = OntologyRewriter(qB2, u_constraints)
     rewrite = orw.Xrewrite()
     a = 1
