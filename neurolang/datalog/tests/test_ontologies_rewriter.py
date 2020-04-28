@@ -1,10 +1,10 @@
 from ... import expression_walker as ew
 from ...expressions import Constant, ExpressionBlock, Symbol
 from ...logic import (
+    Conjunction,
     ExistentialPredicate,
     FunctionApplication,
     Implication,
-    Conjunction,
 )
 from ..aggregation import DatalogWithAggregationMixin
 from ..expressions import TranslateToLogic
