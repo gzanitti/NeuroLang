@@ -94,7 +94,7 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
             solver = RegionFrontendDatalogSolver()
 
         self.onto = OntologyParser(paths)
-        d_pred, u_constraints = onto.parse_ontology()
+        d_pred, u_constraints = self.onto.parse_ontology()
         self.d_pred = d_pred
         self.u_constraints = u_constraints
 
