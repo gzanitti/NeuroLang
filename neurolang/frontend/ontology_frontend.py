@@ -190,7 +190,7 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
         dc = Chase(dl)
         solution_instance = dc.build_chase_solution()
         list_regions = list(
-            solution_instance[symbol.name].value.unwrapped_iter()
+            solution_instance[symbol.expression.name].value.unwrapped_iter()
         )
 
         return list_regions
