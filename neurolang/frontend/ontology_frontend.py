@@ -89,11 +89,10 @@ class DatalogRegions(
 
 
 class NeurolangOntologyDL(QueryBuilderDatalog):
-    def __init__(self, path, solver=None):
+    def __init__(self, paths, solver=None):
         if solver is None:
             solver = RegionFrontendDatalogSolver()
 
-        paths = ["./data/neurofma_fma3.0.owl"]
         self.onto = OntologyParser(paths)
         d_pred, u_constraints = onto.parse_ontology()
         self.d_pred = d_pred
