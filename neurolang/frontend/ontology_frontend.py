@@ -100,12 +100,9 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
 
         super().__init__(solver, chase_class=Chase)
 
-    def solve_query(self, symbol_prob, symbol_prior):
-        prob_terms, prob_voxels, prob_terms_voxels = (
-            self.load_neurosynth_database()
-        )
+    def solve_query(self, symbol_prob, symbol_prior, ns_path=None):
+        prob_terms, prob_terms_voxels = self.load_neurosynth_database(ns_path)
         self.prob_terms = prob_terms
-        self.prob_voxels = prob_voxels
         self.prob_terms_voxels = prob_terms_voxels
 
         eB2 = self.rewrite_database_with_ontology()
@@ -116,28 +113,16 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
 
         return result
 
-    def load_neurosynth_database(self):
-        prob_terms = pd.read_hdf("./data/neurosynth_prob.h5", key="terms")
-        prob_voxels = pd.read_hdf("./data/neurosynth_prob.h5", key="voxels")
-        prob_terms_voxels = pd.read_hdf(
-            "./data/neurosynth_prob.h5", key="terms_voxels"
-        )
-
-        # prob_terms_voxels = prob_terms_voxels[
-        #    prob_terms_voxels.index.get_level_values("term") == "auditory"
-        # ]
-        # prob_terms = prob_terms[prob_terms["index"] == "auditory"]
+    def load_neurosynth_database(self, path):
+        prob_terms = pd.read_hdf(path, key="terms")
+        prob_terms_voxels = pd.read_hdf(path, key="terms_voxels")
 
         prob_terms = prob_terms[["proba", "index"]]
-
-        prob_voxels.reset_index(inplace=True)
-        prob_voxels.rename(columns={0: "prob"}, inplace=True)
-        prob_voxels = prob_voxels[["prob", "index"]]
 
         prob_terms_voxels.reset_index(inplace=True)
         prob_terms_voxels = prob_terms_voxels[["prob", "term", "variable"]]
 
-        return prob_terms, prob_voxels, prob_terms_voxels
+        return prob_terms, prob_terms_voxels
 
     def rewrite_database_with_ontology(self):
         orw = OntologyRewriter(self.get_expressions(), self.u_constraints)
