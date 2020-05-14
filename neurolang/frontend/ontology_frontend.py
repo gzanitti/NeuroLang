@@ -252,7 +252,7 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
 
         return Union(exp)
 
-    def destrieux_name_to_fma_relations():
+    def destrieux_name_to_fma_relations(self):
         return [
             ("l_g_and_s_frontomargin", "Left frontomarginal gyrus"),
             ("l_g_and_s_occipital_inf", "Left inferior occipital gyrus"),
