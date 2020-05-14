@@ -110,9 +110,9 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
 
         eB2 = self.rewrite_database_with_ontology()
         dl = self.load_facts(eB2)
-        sol = self.build_chase_solution(dl, symbol_prob)
+        sol = self.build_chase_solution(dl, symbol_prior)
         dlProb = self.load_probabilistic_facts(sol)
-        result = self.solve_probabilistic_query(dlProb)
+        result = self.solve_probabilistic_query(dlProb, symbol_prob)
 
         return result
 
@@ -213,12 +213,11 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
 
         return dlProb
 
-    def solve_probabilistic_query(self, dlProb):
+    def solve_probabilistic_query(self, dlProb, symbol):
         dt2 = DatalogTranslator()
         eb = dt2.walk(self.get_prob_expressions())
         dlProb.walk(eb)
 
-        probability_voxel = Symbol("probability_voxel")
         z = Symbol("z")
 
         dl_program = probdatalog_to_datalog(dlProb, datalog=DatalogRegions)
@@ -227,7 +226,7 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
         grounded = build_grounding(dlProb, solution_instance)
 
         gm = TranslateGroundedProbDatalogToGraphicalModel().walk(grounded)
-        query = SuccQuery(probability_voxel(z))
+        query = SuccQuery(symbol(z))
         solver = QueryGraphicalModelSolver(gm)
         result = solver.walk(query)
 
