@@ -123,10 +123,10 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
             "./data/neurosynth_prob.h5", key="terms_voxels"
         )
 
-        prob_terms_voxels = prob_terms_voxels[
-            prob_terms_voxels.index.get_level_values("term") == "auditory"
-        ]
-        prob_terms = prob_terms[prob_terms["index"] == "auditory"]
+        # prob_terms_voxels = prob_terms_voxels[
+        #    prob_terms_voxels.index.get_level_values("term") == "auditory"
+        # ]
+        # prob_terms = prob_terms[prob_terms["index"] == "auditory"]
 
         prob_terms = prob_terms[["proba", "index"]]
 
@@ -156,7 +156,7 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
         with open("./data/regiones.pickle", "rb") as fp:
             inter_regions = pickle.load(fp)
 
-        relations_list = destrieux_name_to_fma_relations()
+        relations_list = self.destrieux_name_to_fma_relations()
         r_name = tuple(
             [
                 relation_name(Constant(destrieux), Constant(fma))
