@@ -166,10 +166,12 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
 
         dl = Datalog()
         dl.add_extensional_predicate_from_tuples(
-            self.onto.get_triples_symbol(), d_pred[onto.get_triples_symbol()]
+            self.onto.get_triples_symbol(),
+            self.d_pred[onto.get_triples_symbol()],
         )
         dl.add_extensional_predicate_from_tuples(
-            self.onto.get_pointers_symbol(), d_pred[onto.get_pointers_symbol()]
+            self.onto.get_pointers_symbol(),
+            self.d_pred[onto.get_pointers_symbol()],
         )
         dl.add_extensional_predicate_from_tuples(
             destrieux_to_voxels,
