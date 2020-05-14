@@ -215,7 +215,7 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
         grounded = build_grounding(dlProb, solution_instance)
 
         gm = TranslateGroundedProbDatalogToGraphicalModel().walk(grounded)
-        sym = symbol.expression.formulas[0].consequent.function.name
+        sym = symbol.expression.formulas[0].consequent.function
         query = SuccQuery(sym(z))
         solver = QueryGraphicalModelSolver(gm)
         result = solver.walk(query)
