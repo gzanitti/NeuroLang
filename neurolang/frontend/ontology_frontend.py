@@ -108,7 +108,7 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
         eB2 = self.rewrite_database_with_ontology()
         dl = self.load_facts(eB2)
         sol = self.build_chase_solution(dl, symbol_prior)
-        dlProb = self.load_probabilistic_facts(sol)
+        dlProb = self.load_probabilistic_facts(sol, symbol_prior)
         result = self.solve_probabilistic_query(dlProb, symbol_prob)
 
         return result
