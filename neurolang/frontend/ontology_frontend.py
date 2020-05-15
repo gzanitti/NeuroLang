@@ -182,15 +182,20 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
 
         return list_regions
 
-    def load_probabilistic_facts(self, list_regions):
+    def load_probabilistic_facts(self, list_regions, symbol_prior):
         dlProb = ProbDatalogProgram()
+
+        file = open("./data/xyz_from_neurosynth.pkl", "rb")
+        ret = pickle.load(file)
+        file.close()
 
         term = Symbol("term")
         neurosynth_data = Symbol("neurosynth_data")
-        region_contains_voxel = Symbol("region_contains_voxel")
+        # region_contains_voxel = Symbol("region_contains_voxel")
 
         dlProb.add_extensional_predicate_from_tuples(
-            region_contains_voxel, set(list_regions)
+            symbol_prior.expression.formulas[0].consequent.function,
+            set(list_regions),
         )
         dlProb.add_probfacts_from_tuples(
             term, set(self.prob_terms.itertuples(index=False, name=None))
@@ -198,6 +203,10 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
         dlProb.add_probfacts_from_tuples(
             neurosynth_data,
             set(self.prob_terms_voxels.itertuples(index=False, name=None)),
+        )
+
+        dlProb.add_extensional_predicate_from_tuples(
+            neurosynth_region, [(k, v) for k, v in ret.items()]
         )
 
         return dlProb
