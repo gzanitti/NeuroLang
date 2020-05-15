@@ -191,6 +191,7 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
 
         term = Symbol("term")
         neurosynth_data = Symbol("neurosynth_data")
+        neurosynth_region = Symbol("neurosynth_region")
         # region_contains_voxel = Symbol("region_contains_voxel")
 
         dlProb.add_extensional_predicate_from_tuples(
