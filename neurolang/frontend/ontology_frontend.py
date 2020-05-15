@@ -89,9 +89,11 @@ class DatalogRegions(
 
 
 class NeurolangOntologyDL(QueryBuilderDatalog):
-    def __init__(self, paths, load_format="xml", solver=None):
+    def __init__(self, paths, load_format="xml", solver=None, ns_path=None):
         if solver is None:
             solver = RegionFrontendDatalogSolver()
+
+        self.ns_path = ns_path
 
         self.onto = OntologyParser(paths, load_format)
         d_pred, u_constraints = self.onto.parse_ontology()
@@ -100,8 +102,8 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
 
         super().__init__(solver, chase_class=Chase)
 
-    def solve_query(self, symbol_prob, symbol_prior, ns_path=None):
-        prob_terms, prob_terms_voxels = self.load_neurosynth_database(ns_path)
+    def solve_query(self, symbol_prob, symbol_prior):
+        prob_terms, prob_terms_voxels = self.load_neurosynth_database()
         self.prob_terms = prob_terms
         self.prob_terms_voxels = prob_terms_voxels
 
@@ -113,9 +115,9 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
 
         return result
 
-    def load_neurosynth_database(self, path):
-        prob_terms = pd.read_hdf(path, key="terms")
-        prob_terms_voxels = pd.read_hdf(path, key="terms_voxels")
+    def load_neurosynth_database(self):
+        prob_terms = pd.read_hdf(self.ns_path, key="terms")
+        prob_terms_voxels = pd.read_hdf(self.ns_path, key="terms_voxels")
 
         prob_terms = prob_terms[["proba", "index"]]
 
