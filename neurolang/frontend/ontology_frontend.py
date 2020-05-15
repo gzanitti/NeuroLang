@@ -130,7 +130,6 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
 
         eB2 = ()
         for imp in rewrite:
-            print(imp[0])
             eB2 += (imp[0],)
 
         return Union(eB2)
