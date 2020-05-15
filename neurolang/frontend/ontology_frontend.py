@@ -150,7 +150,7 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
             ]
         )
 
-        dl = Datalog()
+        dl = self.solver
         dl.add_extensional_predicate_from_tuples(
             self.onto.get_triples_symbol(),
             self.d_pred[self.onto.get_triples_symbol()],
