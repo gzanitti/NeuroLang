@@ -102,15 +102,15 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
 
         super().__init__(solver, chase_class=Chase)
 
-    def solve_query(self, symbol_prob, symbol_prior):
+    def solve_query(self, symbol_prob):
         prob_terms, prob_terms_voxels = self.load_neurosynth_database()
         self.prob_terms = prob_terms
         self.prob_terms_voxels = prob_terms_voxels
 
         eB2 = self.rewrite_database_with_ontology()
         dl = self.load_facts(eB2)
-        sol = self.build_chase_solution(dl, symbol_prior)
-        dlProb = self.load_probabilistic_facts(sol, symbol_prior)
+        sol = self.build_chase_solution(dl)
+        dlProb = self.load_probabilistic_facts(sol)
         result = self.solve_probabilistic_query(dlProb, symbol_prob)
 
         return result
@@ -172,19 +172,13 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
 
         return dl
 
-    def build_chase_solution(self, dl, symbol):
+    def build_chase_solution(self, dl):
 
         dc = Chase(dl)
         solution_instance = dc.build_chase_solution()
-        list_regions = list(
-            solution_instance[
-                symbol.expression.formulas[0].consequent.function.name
-            ].value.unwrapped_iter()
-        )
+        return solution_instance
 
-        return list_regions
-
-    def load_probabilistic_facts(self, list_regions, symbol_prior):
+    def load_probabilistic_facts(self, solution_instance):
         dlProb = ProbDatalogProgram()
 
         file = open("./data/xyz_from_neurosynth.pkl", "rb")
@@ -194,12 +188,10 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
         term = Symbol("term")
         neurosynth_data = Symbol("neurosynth_data")
         neurosynth_region = Symbol("neurosynth_region")
-        # region_contains_voxel = Symbol("region_contains_voxel")
 
-        dlProb.add_extensional_predicate_from_tuples(
-            symbol_prior.expression.formulas[0].consequent.function,
-            set(list_regions),
-        )
+        for term in solution_instance.items():
+            dlProb.add_extensional_predicate_from_tuples(term[0], term[1])
+
         dlProb.add_probfacts_from_tuples(
             term, set(self.prob_terms.itertuples(index=False, name=None))
         )
@@ -219,7 +211,7 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
         eb = dt2.walk(self.get_prob_expressions())
         dlProb.walk(eb)
 
-        z = Symbol("z")
+        z = Symbol.fresh()
 
         dl_program = probdatalog_to_datalog(dlProb, datalog=DatalogRegions)
         dc = Chase(dl_program)
