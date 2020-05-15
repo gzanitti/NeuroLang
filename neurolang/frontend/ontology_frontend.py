@@ -190,7 +190,9 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
         neurosynth_region = Symbol("neurosynth_region")
 
         for term in solution_instance.items():
-            dlProb.add_extensional_predicate_from_tuples(term[0], term[1])
+            dlProb.add_extensional_predicate_from_tuples(
+                term[0], term[1].value
+            )
 
         dlProb.add_probfacts_from_tuples(
             term, set(self.prob_terms.itertuples(index=False, name=None))
