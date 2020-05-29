@@ -58,7 +58,8 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
         onto = OntologyParser(paths, load_format)
         d_pred, u_constraints, entailment_rules = onto.parse_ontology()
         self.solver.walk(u_constraints)
-        self.solver.walk(entailment_rules)
+        print("hola")
+        # self.solver.walk(entailment_rules)
         self.solver.add_extensional_predicate_from_tuples(
             onto.get_triples_symbol(), d_pred[onto.get_triples_symbol()]
         )
