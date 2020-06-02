@@ -167,14 +167,14 @@ class ChaseNamedRelationalAlgebraMixin:
             predicates, instance, restriction_instance
         )
 
-        """if consequent.functor in instance:
+        if consequent.functor in instance:
             substitutions = self.eliminate_already_computed(
                 consequent, instance, substitutions
             )
         if consequent.functor in restriction_instance:
             substitutions = self.eliminate_already_computed(
                 consequent, restriction_instance, substitutions
-            )"""
+            )
 
         return self.compute_result_set(
             rule, substitutions, instance, restriction_instance
