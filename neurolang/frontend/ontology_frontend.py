@@ -98,7 +98,7 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
         deterministic_program = list()
         probabilistic_symbols = set() | set(prob_symbols)
         probabilistic_program = list()
-        unclassified_code = list(program)
+        unclassified_code = program
         unclassified = 0
         initial_unclassified_length = len(unclassified_code) + 1
         while (
@@ -128,6 +128,7 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
             raise NeuroLangFrontendException(
                 "An atom was defined as both deterministic and probabilistic"
             )
+        print(unclassified_code)
         if len(unclassified_code) > 0:
             raise NeuroLangFrontendException("There are unclassified atoms")
 
