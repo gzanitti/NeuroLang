@@ -3,21 +3,28 @@ from collections import defaultdict
 from functools import lru_cache
 from typing import AbstractSet, Callable
 
-from ...expressions import Constant, FunctionApplication, Symbol
 from ...expression_walker import ReplaceSymbolWalker
+from ...expressions import Constant, FunctionApplication, Symbol
 from ...logic.unification import apply_substitution_arguments
-from ...relational_algebra import (ColumnInt, Product, Projection,
-                                   RelationalAlgebraOptimiser,
-                                   RelationalAlgebraSolver, Selection, eq_)
+from ...relational_algebra import (
+    ColumnInt,
+    Product,
+    Projection,
+    RelationalAlgebraOptimiser,
+    RelationalAlgebraSolver,
+    Selection,
+    eq_,
+)
 from ...type_system import Unknown, is_leq_informative
 from ...utils import NamedRelationalAlgebraFrozenSet
 from ..expression_processing import extract_logic_free_variables
 from ..expressions import Conjunction, Implication
 from ..instance import MapInstance
 from ..translate_to_named_ra import TranslateToNamedRA
-from ..wrapped_collections import (WrappedNamedRelationalAlgebraFrozenSet,
-                                   WrappedRelationalAlgebraSet)
-
+from ..wrapped_collections import (
+    WrappedNamedRelationalAlgebraFrozenSet,
+    WrappedRelationalAlgebraSet,
+)
 
 invert = Constant(operator.invert)
 eq = Constant(operator.eq)
@@ -34,10 +41,10 @@ class ChaseRelationalAlgebraPlusCeriMixin:
        San Francisco, CA, USA, 1986;
        http://dl.acm.org/citation.cfm?id=645913.671468), VLDB ’86, pp. 395–402.
     """
+
     def obtain_substitutions(self, args_to_project, rule_predicates_iterator):
         ra_code, projected_var_names = self.translate_to_ra_plus(
-            args_to_project,
-            rule_predicates_iterator
+            args_to_project, rule_predicates_iterator
         )
         ra_code_opt = RelationalAlgebraOptimiser().walk(ra_code)
         if not isinstance(ra_code_opt, Constant) or len(ra_code_opt.value) > 0:
@@ -49,11 +56,7 @@ class ChaseRelationalAlgebraPlusCeriMixin:
 
         return substitutions
 
-    def translate_to_ra_plus(
-        self,
-        args_to_project,
-        rule_predicates_iterator
-    ):
+    def translate_to_ra_plus(self, args_to_project, rule_predicates_iterator):
         self.seen_vars = dict()
         self.selections = []
         self.projections = tuple()
@@ -100,8 +103,12 @@ class ChaseRelationalAlgebraPlusCeriMixin:
         return new_ra_expression
 
     def translate_predicate_process_argument(
-        self, arg, local_selections, local_column,
-        global_column, args_to_project
+        self,
+        arg,
+        local_selections,
+        local_column,
+        global_column,
+        args_to_project,
     ):
         if isinstance(arg, Constant):
             local_selections.append((local_column, arg))
@@ -141,6 +148,7 @@ class ChaseNamedRelationalAlgebraMixin:
       (Addison Wesley, 1995), Addison-Wesley.
 
     """
+
     def chase_step(self, instance, rule, restriction_instance=None):
         if restriction_instance is None:
             restriction_instance = MapInstance()
@@ -159,14 +167,14 @@ class ChaseNamedRelationalAlgebraMixin:
             predicates, instance, restriction_instance
         )
 
-        if consequent.functor in instance:
+        """if consequent.functor in instance:
             substitutions = self.eliminate_already_computed(
                 consequent, instance, substitutions
             )
         if consequent.functor in restriction_instance:
             substitutions = self.eliminate_already_computed(
                 consequent, restriction_instance, substitutions
-            )
+            )"""
 
         return self.compute_result_set(
             rule, substitutions, instance, restriction_instance
@@ -193,24 +201,23 @@ class ChaseNamedRelationalAlgebraMixin:
         if not isinstance(rule.antecedent, Conjunction):
             return rule
 
-        free_variables = (
-            extract_logic_free_variables(rule.antecedent) |
-            extract_logic_free_variables(rule.consequent)
-        )
+        free_variables = extract_logic_free_variables(
+            rule.antecedent
+        ) | extract_logic_free_variables(rule.consequent)
         cont = True
         while cont:
             cont = False
             for pos, predicate in enumerate(rule.antecedent.formulas):
                 if (
-                    isinstance(predicate, FunctionApplication) and
-                    predicate.functor == eq and
-                    predicate.args[0] in free_variables and
-                    predicate.args[1] in free_variables
+                    isinstance(predicate, FunctionApplication)
+                    and predicate.functor == eq
+                    and predicate.args[0] in free_variables
+                    and predicate.args[1] in free_variables
                 ):
                     equality = predicate
                     new_antecedent_preds = (
-                        rule.antecedent.formulas[:pos] +
-                        rule.antecedent.formulas[pos + 1:]
+                        rule.antecedent.formulas[:pos]
+                        + rule.antecedent.formulas[pos + 1 :]
                     )
                     cont = len(new_antecedent_preds) > 1
                     new_antecedent = Conjunction(new_antecedent_preds)
@@ -229,9 +236,7 @@ class ChaseNamedRelationalAlgebraMixin:
             antecedent_formulas = rule.antecedent.formulas
         else:
             antecedent_formulas = (rule.antecedent,)
-        antecedent = Conjunction(
-            antecedent_formulas + tuple(new_equalities)
-        )
+        antecedent = Conjunction(antecedent_formulas + tuple(new_equalities))
         rule = Implication(consequent, antecedent)
         return rule
 
@@ -241,12 +246,10 @@ class ChaseNamedRelationalAlgebraMixin:
             return substitutions
 
         args = tuple(
-            arg.name for arg in consequent.args
-            if isinstance(arg, Symbol)
+            arg.name for arg in consequent.args if isinstance(arg, Symbol)
         )
         already_computed = WrappedNamedRelationalAlgebraFrozenSet(
-            args,
-            instance[consequent.functor].value
+            args, instance[consequent.functor].value
         )
         if substitutions_columns.issuperset(already_computed.columns):
             already_computed = substitutions.naturaljoin(already_computed)
@@ -260,13 +263,9 @@ class ChaseNamedRelationalAlgebraMixin:
             return substitutions
         substitutions = substitutions - already_computed
         if not isinstance(
-            substitutions,
-            WrappedNamedRelationalAlgebraFrozenSet
+            substitutions, WrappedNamedRelationalAlgebraFrozenSet
         ):
-            substitutions = (
-                sorted(substitutions.columns),
-                substitutions
-            )
+            substitutions = (sorted(substitutions.columns), substitutions)
         return substitutions
 
     def obtain_substitutions(
@@ -289,8 +288,7 @@ class ChaseNamedRelationalAlgebraMixin:
 
         result_value = result.value
         substitutions = WrappedNamedRelationalAlgebraFrozenSet(
-            result_value.columns,
-            result_value
+            result_value.columns, result_value
         )
 
         return substitutions
@@ -300,10 +298,7 @@ class ChaseNamedRelationalAlgebraMixin:
         builtin_symbols = {
             k: v
             for k, v in self.datalog_program.symbol_table.items()
-            if (
-                v.type is not Unknown and
-                is_leq_informative(v.type, Callable)
-            )
+            if (v.type is not Unknown and is_leq_informative(v.type, Callable))
         }
         rsw = ReplaceSymbolWalker(builtin_symbols)
         conjunction = rsw.walk(conjunction)
@@ -324,8 +319,8 @@ class ChaseNamedRelationalAlgebraMixin:
         else:
             tuples = [
                 tuple(
-                    a.value for a in
-                    apply_substitution_arguments(
+                    a.value
+                    for a in apply_substitution_arguments(
                         rule.consequent.args, substitution
                     )
                 )
