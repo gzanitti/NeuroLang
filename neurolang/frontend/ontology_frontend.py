@@ -79,9 +79,9 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
         if len(self.current_program) == 0:
             raise NeuroLangFrontendException("Your program is empty")
 
-        program = []
+        unclassified_code = []
         for p in self.current_program:
-            program.append(p.expression)
+            unclassified_code.append(p.expression)
         # query_pred = self.current_program[0].expression
         # query_reachable_code = reachable_code(query_pred, self.solver)
         constraints_symbols = set(
@@ -98,7 +98,6 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
         deterministic_program = list()
         probabilistic_symbols = set() | set(prob_symbols)
         probabilistic_program = list()
-        unclassified_code = program
         unclassified = 0
         initial_unclassified_length = len(unclassified_code) + 1
         while (
