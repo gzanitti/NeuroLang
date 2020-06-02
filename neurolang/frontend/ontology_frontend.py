@@ -30,7 +30,7 @@ from .query_resolution_datalog import QueryBuilderDatalog
 
 
 class ChaseFrontend(
-    Chase, ChaseNaive, ChaseNamedRelationalAlgebraMixin, ChaseGeneral
+    ChaseNaive, ChaseNamedRelationalAlgebraMixin, ChaseGeneral
 ):
     pass
 
