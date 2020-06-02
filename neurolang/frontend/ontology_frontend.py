@@ -81,8 +81,9 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
 
         program = []
         for p in self.current_program:
-            program.append(p.expession)
-
+            program.append(p.expression)
+        # query_pred = self.current_program[0].expression
+        # query_reachable_code = reachable_code(query_pred, self.solver)
         constraints_symbols = set(
             [
                 ri.consequent.functor
