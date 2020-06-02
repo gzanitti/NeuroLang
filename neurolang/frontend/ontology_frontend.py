@@ -127,6 +127,7 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
         if len(unclassified_code) > 0:
             raise NeuroLangFrontendException("There are unclassified atoms")
 
+        print(Union(deterministic_program))
         return Union(deterministic_program), Union(probabilistic_program)
 
     def solve_query(self, symbol_prob):
