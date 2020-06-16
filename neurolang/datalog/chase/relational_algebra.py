@@ -1,9 +1,10 @@
+import logging
 import operator
 from collections import defaultdict
 from functools import lru_cache
 from typing import AbstractSet, Callable
 
-from ...expression_walker import ReplaceSymbolWalker
+from ...expression_walker import ExpressionWalker, ReplaceSymbolWalker
 from ...expressions import Constant, FunctionApplication, Symbol
 from ...logic.unification import apply_substitution_arguments
 from ...relational_algebra import (
@@ -11,6 +12,7 @@ from ...relational_algebra import (
     Product,
     Projection,
     RelationalAlgebraOptimiser,
+    RelationalAlgebraPushInSelections,
     RelationalAlgebraSolver,
     Selection,
     eq_,
@@ -25,6 +27,9 @@ from ..wrapped_collections import (
     WrappedNamedRelationalAlgebraFrozenSet,
     WrappedRelationalAlgebraSet,
 )
+
+LOG = logging.getLogger(__name__)
+
 
 invert = Constant(operator.invert)
 eq = Constant(operator.eq)
@@ -48,6 +53,7 @@ class ChaseRelationalAlgebraPlusCeriMixin:
         )
         ra_code_opt = RelationalAlgebraOptimiser().walk(ra_code)
         if not isinstance(ra_code_opt, Constant) or len(ra_code_opt.value) > 0:
+            LOG.info("About to execute RA query %s", ra_code)
             result = RelationalAlgebraSolver().walk(ra_code_opt)
         else:
             return [{}]
@@ -137,6 +143,12 @@ class ChaseRelationalAlgebraPlusCeriMixin:
             }
             substitutions.append(subs)
         return substitutions
+
+
+class NamedRelationalAlgebraOptimiser(
+    RelationalAlgebraPushInSelections, ExpressionWalker
+):
+    pass
 
 
 class ChaseNamedRelationalAlgebraMixin:
@@ -284,6 +296,8 @@ class ChaseNamedRelationalAlgebraMixin:
         ra_code = self.translate_conjunction_to_named_ra(
             Conjunction(predicates)
         )
+
+        LOG.info("About to execute RA query %s", ra_code)
         result = RelationalAlgebraSolver(symbol_table).walk(ra_code)
 
         result_value = result.value
@@ -303,7 +317,10 @@ class ChaseNamedRelationalAlgebraMixin:
         rsw = ReplaceSymbolWalker(builtin_symbols)
         conjunction = rsw.walk(conjunction)
         traslator_to_named_ra = TranslateToNamedRA()
-        return traslator_to_named_ra.walk(conjunction)
+        LOG.info(f"Translating and optimising CQ {conjunction} to RA")
+        ra_code = traslator_to_named_ra.walk(conjunction)
+        ra_code = NamedRelationalAlgebraOptimiser().walk(ra_code)
+        return ra_code
 
     def compute_result_set(
         self, rule, substitutions, instance, restriction_instance=None

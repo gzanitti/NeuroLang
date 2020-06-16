@@ -8,6 +8,7 @@ from .expression_pattern_matching import NeuroLangPatternMatchingNoMatch
 from .expressions import (
     Constant,
     Definition,
+    Expression,
     FunctionApplication,
     Symbol,
     Unknown,
@@ -36,8 +37,31 @@ def str2columnstr_constant(name):
     )
 
 
+def get_expression_columns(expression):
+    columns = set()
+    args = list(expression.unapply())
+    while args:
+        arg = args.pop()
+        if isinstance(arg, Constant[Column]):
+            columns.add(arg)
+        elif isinstance(arg, Constant):
+            continue
+        elif isinstance(arg, Expression):
+            args += arg.unapply()
+        elif isinstance(arg, tuple):
+            args += list(arg)
+
+    return columns
+
+
 class RelationalAlgebraOperation(Definition):
-    pass
+    def __init__(self):
+        self._columns = set()
+
+    def columns(self):
+        if not hasattr(self, '_columns'):
+            self._columns = get_expression_columns(self)
+        return self._columns
 
 
 class Selection(RelationalAlgebraOperation):
@@ -645,7 +669,7 @@ class RelationalAlgebraSolver(ew.ExpressionWalker):
     def set_destroy(self, destroy):
         relation = self.walk(destroy.relation).value
         src_column = self.walk(destroy.src_column).value
-        dst_column = self.walk(destroy.dst_column).value
+        dst_columns = self.walk(destroy.dst_column).value
         if src_column not in relation.columns:
             raise NeuroLangException(
                 f"source column {src_column} not present in "
@@ -654,20 +678,19 @@ class RelationalAlgebraSolver(ew.ExpressionWalker):
 
         cols = relation.columns
         set_type = type(relation)
-        if dst_column not in cols:
-            dst_cols = cols + (dst_column,)
-        else:
-            dst_cols = cols
+        if not isinstance(dst_columns, tuple):
+            dst_columns = (dst_columns,)
+        dst_cols = cols + tuple(d for d in dst_columns if d not in cols)
         result_set = set_type(columns=dst_cols)
         if len(cols) > 0:
             row_group_iterator = (t for _, t in relation.groupby(cols))
         else:
             row_group_iterator = (relation,)
         for t in row_group_iterator:
-            destroyed_set = set_type(columns=[dst_column])
+            destroyed_set = set_type(columns=dst_columns)
             for row in t:
                 row_set = set_type(
-                    columns=(dst_column,),
+                    columns=dst_columns,
                     iterable=getattr(row, src_column)
                 )
                 destroyed_set = destroyed_set | row_set
@@ -1074,3 +1097,58 @@ def _get_const_relation_type(const_relation):
             return const_relation.type
     else:
         return _infer_relation_type(const_relation.value)
+
+
+class RelationalAlgebraPushInSelections(ew.PatternWalker):
+    @ew.add_match(
+        Selection(NaturalJoin, ...),
+        lambda exp: (
+            len(
+                get_expression_columns(exp.formula) &
+                get_expression_columns(exp.relation.relation_right)
+            ) == 0
+        )
+    )
+    def push_selection_in_left(self, expression):
+        return self.walk(
+            NaturalJoin(
+                Selection(
+                    expression.relation.relation_left,
+                    expression.formula
+                ),
+                expression.relation.relation_right
+            )
+        )
+
+    @ew.add_match(
+        Selection(NaturalJoin, ...),
+        lambda exp: (
+            len(
+                get_expression_columns(exp.formula) &
+                get_expression_columns(exp.relation.relation_left)
+            ) == 0
+        )
+    )
+    def push_selection_in_right(self, expression):
+        return self.walk(
+            NaturalJoin(
+                expression.relation.relation_left,
+                Selection(
+                    expression.relation.relation_right,
+                    expression.formula
+                )
+            )
+        )
+
+    @ew.add_match(
+        Selection(Projection, ...),
+        lambda exp: len(
+            set(exp.relation.attributes) &
+            get_expression_columns(exp.formula)
+        ) == 0
+    )
+    def push_selection_in_projection(self, expression):
+        return Projection(
+            Selection(expression.relation.relation, expression.formula),
+            expression.relation.attributes
+        )
