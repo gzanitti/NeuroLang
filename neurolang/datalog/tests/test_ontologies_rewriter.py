@@ -1,4 +1,7 @@
+from rdflib import OWL, RDF, RDFS
+
 from ... import expression_walker as ew
+from ...expression_walker import ReplaceExpressionWalker
 from ...expressions import Constant, ExpressionBlock, Symbol
 from ...logic import (
     Conjunction,
@@ -6,6 +9,7 @@ from ...logic import (
     FunctionApplication,
     Implication,
 )
+from ...logic.transformations import CollapseConjunctions
 from ..aggregation import DatalogWithAggregationMixin
 from ..expressions import TranslateToLogic
 from ..ontologies_parser import RightImplication
@@ -225,9 +229,6 @@ def test_example_4_3():
 
 
 def test_infinite_walker():
-    from rdflib import RDFS, RDF, OWL
-    from ...expression_walker import ReplaceExpressionWalker
-    from ...logic.transformations import CollapseConjunctions
 
     subClassOf = Symbol(str(RDFS.subClassOf))
     rest = Symbol(str(OWL.rest))
@@ -251,51 +252,3 @@ def test_infinite_walker():
     expected = CollapseConjunctions().walk(expected)
 
     assert sigma_rep == expected
-
-
-def test_rewriter_without_symbols():
-    from ..ontologies_parser import OntologyParser
-    from ..constraints_representation import DatalogConstraintsProgram
-    from ...expression_walker import ExpressionBasicEvaluator
-    from ..expressions import TranslateToLogic
-    from ... import expression_walker as ew
-    from ..aggregation import DatalogWithAggregationMixin
-    from rdflib import RDFS
-
-    class DatalogTranslator(
-        TranslateToLogic, ew.IdentityWalker, DatalogWithAggregationMixin
-    ):
-        pass
-
-    class Datalog(DatalogConstraintsProgram, ExpressionBasicEvaluator):
-        pass
-
-    paths = [
-        "/Users/gzanitti/Projects/INRIA/ontologies_paper/data/neurofma_fma3.0.owl"
-    ]
-    onto = OntologyParser(paths)
-    d_pred, u_constraints = onto.parse_ontology()
-    id_ = Symbol("id_")
-    reg = Symbol("reg")
-    sub = Symbol("sub")
-    x = S_("x")
-    y = S_("y")
-    label = Symbol(str(RDFS.label))
-    subClassOf = Symbol(str(RDFS.subClassOf))
-    region = Symbol("region")
-    regional_part = Symbol(
-        "http://sig.biostr.washington.edu/fma3.0#regional_part_of"
-    )
-
-    imps = tuple()
-    imps += (Implication(id_(y), label(y, C_("Temporal lobe"))),)
-    imps += (Implication(reg(x), regional_part(x, y) & id_(y)),)
-    imps += (Implication(sub(y), subClassOf(y, x) & reg(x)),)
-
-    qB = ExpressionBlock(imps)
-    dt = DatalogTranslator()
-    qB2 = dt.walk(qB)
-
-    orw = OntologyRewriter(qB2, u_constraints)
-    rewrite = orw.Xrewrite()
-    a = 1

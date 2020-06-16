@@ -5,8 +5,10 @@ from typing import AbstractSet, Callable, Mapping, Sequence, Tuple
 import pytest
 
 from .. import expressions, logic
-from ..expression_walker import (ExpressionBasicEvaluator,
-                                 TypedSymbolTableEvaluator)
+from ..expression_walker import (
+    ExpressionBasicEvaluator,
+    TypedSymbolTableEvaluator,
+)
 from ..expressions import Expression, Unknown, expressions_behave_as_objects
 
 C_ = expressions.Constant
@@ -54,6 +56,19 @@ def test_fresh_symbol():
     assert isinstance(s1, S_) and s1.type is Unknown
     assert s1 != s2
     assert s1 != s2 and s2 != s3 and s3.type is int
+
+
+def test_fresh_symbol_2():
+    # Reset sequence generators as if the program just started
+    if hasattr(S_, "_fresh_generator_"):
+        del S_._fresh_generator_
+    if hasattr(S_[str], "_fresh_generator_"):
+        del S_[str]._fresh_generator_
+
+    s2 = S_[str].fresh()
+    s1 = S_.fresh()
+
+    assert s1.name != s2.name
 
 
 def evaluate(expression, **kwargs):
@@ -288,3 +303,11 @@ def test_nested_universals():
     exp = U_(x, U_(y, P(x) & Q(y)))
 
     assert exp._symbols == {Q, P}
+
+
+def test_fresh_symbol_subclass():
+    class TestSymbol(expressions.Symbol):
+        pass
+
+    assert isinstance(TestSymbol.fresh(), TestSymbol)
+    assert isinstance(TestSymbol[int].fresh(), TestSymbol[int])

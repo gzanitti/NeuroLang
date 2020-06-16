@@ -1,12 +1,12 @@
 import logging
 import typing
 from collections import deque
-from itertools import product
+from itertools import product, tee
 
 from .expression_pattern_matching import (
     PatternMatcher,
-    add_match,
     add_entry_point_match,
+    add_match,
 )
 from .expressions import (
     Constant,
@@ -23,7 +23,7 @@ from .expressions import (
     is_leq_informative,
     unify_types,
 )
-
+from .utils import OrderedSet
 
 __all__ = [
     "expression_iterator",
@@ -178,7 +178,7 @@ class EntryPointPatternWalker(PatternWalker):
             self._entry_point_walked = False
 
 
-class IdentityWalker(PatternMatcher):
+class IdentityWalker(PatternWalker):
     """Walks through expresssions without doing
     a thing.
     """
@@ -201,7 +201,11 @@ class ExpressionWalker(PatternWalker):
             if isinstance(arg, Expression):
                 new_arg = self.walk(arg)
                 changed |= new_arg is not arg
-            elif isinstance(arg, (tuple, list)):
+            elif (
+                isinstance(arg, tuple)
+                and len(arg) > 0
+                and isinstance(arg[0], Expression)
+            ):
                 new_arg, change = self.process_iterable_argument(arg)
                 changed |= change
             elif arg is Ellipsis:
@@ -266,7 +270,7 @@ class ReplaceExpressionWalker(ExpressionWalker):
         for arg in args:
             if isinstance(arg, Expression):
                 new_arg = self.walk(arg)
-            elif isinstance(arg, (tuple, list)):
+            elif isinstance(arg, tuple):
                 new_arg, _ = self.process_iterable_argument(arg)
             elif arg is Ellipsis:
                 raise NeuroLangException(
@@ -331,15 +335,47 @@ class ReplaceExpressionsByValues(ExpressionWalker):
 
     @add_match(Constant[typing.AbstractSet])
     def constant_abstract_set(self, constant_abstract_set):
-        return frozenset(
-            self.walk(expression) for expression in constant_abstract_set.value
-        )
+        value = constant_abstract_set.value
+        if len(value) > 0 and isinstance(
+            next(iter(value)), (Expression, tuple)
+        ):
+            value = type(value)(self.walk(expression) for expression in value)
+        return value
 
     @add_match(Constant[typing.Tuple])
     def constant_tuple(self, constant_tuple):
-        return tuple(
-            self.walk(expression) for expression in constant_tuple.value
+        value = constant_tuple.value
+        if len(value) > 0 and isinstance(value[0], (Expression, tuple)):
+            value = constant_tuple.value
+            value = type(value)(
+                self.walk(expression) for expression in constant_tuple.value
+            )
+        return value
+
+    @add_match(Constant[typing.Iterable])
+    def constant_iterable(self, constant_iterable):
+        value = constant_iterable.value
+        it1, it2 = tee(value)
+        (
+            ReplaceExpressionsByValues._validate_iterable_for_constant_iterable_case(
+                it1
+            )
         )
+        if isinstance(value, typing.Generator):
+            return it2
+        else:
+            return value
+
+    @staticmethod
+    def _validate_iterable_for_constant_iterable_case(iterable):
+        iterable_of_expressions = False
+        iterable_of_expressions = any(
+            isinstance(e, Expression) for e in iterable
+        )
+        if iterable_of_expressions:
+            raise NeuroLangException(
+                "Iterable of Expressions needs to be a Tuple or Set"
+            )
 
     @add_match(Constant)
     def constant(self, constant):
@@ -433,3 +469,49 @@ class ExpressionBasicEvaluator(ExpressionWalker):
             return self.walk(rsw.walk(lambda_.function_expression))
         else:
             return lambda_.function_expression
+
+
+class FunctionApplicationToPythonLambda(PatternWalker):
+    """
+    Convert a `FunctionApplication` expression with constant functor
+    into a python `lambda` expression where the symbols are the parameters.
+    """
+
+    @add_match(Constant)
+    def constant(self, e):
+        return e.value, OrderedSet()
+
+    @add_match(
+        FunctionApplication(Constant, ...),
+        lambda e: all(
+            isinstance(a, (Symbol, Constant, FunctionApplication))
+            for a in e.args
+        ),
+    )
+    def fa(self, e):
+        arg_sym = []
+        arg_dict = {}
+        param_sym = OrderedSet()
+        single_param_sym = Symbol.fresh().name
+        for arg in e.args:
+            if isinstance(arg, (Constant, FunctionApplication)):
+                value, param_sym_ = self.walk(arg)
+                n = Symbol.fresh().name
+                arg_dict[n] = value
+                if isinstance(arg, FunctionApplication):
+                    n = f"{n}({','.join(param_sym_)})"
+                arg_sym.append(n)
+                param_sym |= param_sym_
+            else:
+                arg_sym.append(f"{arg.name}")
+                param_sym.add(f"{arg.name}")
+
+        fun_sym = Symbol.fresh().name
+        arg_dict[fun_sym] = e.functor.value
+        str_eval = (
+            f"lambda {', '.join(param_sym)}: {fun_sym}({', '.join(arg_sym)})"
+        )
+        gs = globals()
+        ls = locals()
+        gs.update(arg_dict)
+        return eval(str_eval, gs, ls), param_sym

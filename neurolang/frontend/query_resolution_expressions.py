@@ -8,6 +8,7 @@ from .. import neurolang as nl
 from ..expression_pattern_matching import NeuroLangPatternMatchingNoMatch
 from ..expression_walker import (ExpressionWalker, ReplaceExpressionsByValues,
                                  add_match)
+from ..type_system import is_leq_informative
 from ..utils import RelationalAlgebraFrozenSet
 
 
@@ -80,9 +81,38 @@ class Expression(object):
         else:
             return object.__repr__(self)
 
+    def __getattr__(self, name):
+        if isinstance(name, Expression):
+            name_ = name.expression
+        else:
+            name_ = nl.Constant[str](name)
+        new_expression = exp.FunctionApplication(
+            nl.Constant(getattr), (self.expression, name_,)
+        )
+        return Operation(
+            self.query_builder, new_expression, self, (name,)
+        )
+
+    def help(self):
+        expression = self.expression
+        if isinstance(expression, nl.Constant):
+            if is_leq_informative(expression.type, Callable):
+                return help(expression.value)
+            elif is_leq_informative(expression.type, AbstractSet):
+                return "Set of tuples"
+            else:
+                return "Constant value"
+        elif isinstance(expression, nl.FunctionApplication):
+            return "Evaluation of function to parameters"
+        elif isinstance(expression, nl.Symbol):
+            return "Unlinked symbol"
+        else:
+            return "Help not defined yet"
+
 
 binary_operations = (
-    op.add, op.sub, op.mul, op.ge, op.le, op.gt, op.lt, op.eq
+    op.add, op.sub, op.mul, op.ge, op.le, op.gt, op.lt, op.eq,
+    op.contains
 )
 
 
@@ -99,10 +129,11 @@ def op_bind(op):
             op, auto_infer_type=False
         )
         new_expression = functor(*new_args)
-        return Operation(
+        res = Operation(
             self.query_builder, new_expression, op,
             (self,) + args, infix=len(args) > 0
         )
+        return res
 
     return fun
 
@@ -177,6 +208,8 @@ class Operation(Expression):
             op_repr = '({})'.format(repr(self.operator))
         elif self.operator in self.operator_repr:
             op_repr = self.operator_repr[self.operator]
+        elif isinstance(self.operator, Expression):
+            op_repr = repr(self.operator)
         elif hasattr(self.operator, '__qualname__'):
             op_repr = self.operator.__qualname__
         else:
@@ -323,6 +356,10 @@ class Symbol(Expression):
                 return self._rsbv.walk(constant)
             except NeuroLangPatternMatchingNoMatch:
                 raise ValueError("Expression doesn't have a python value")
+
+    @property
+    def parameter_names(self):
+        return self.query_builder.parameter_names(self)
 
 
 class Query(Expression):

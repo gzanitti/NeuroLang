@@ -1,3 +1,4 @@
+import collections
 import logging
 import os
 
@@ -11,7 +12,19 @@ except ModuleNotFoundError:
     raise ImportError("Neurosynth not installed in the system")
 
 
+class StudyID(str):
+    pass
+
+
+class TfIDf(float):
+    pass
+
+
 class NeuroSynthHandler(object):
+    """
+    Class for the management of data provided by neurosynth.
+    """
+
     def __init__(self, ns_dataset=None):
         self._dataset = ns_dataset
 
@@ -23,14 +36,25 @@ class NeuroSynthHandler(object):
         prior=0.5,
         image_type=None,
     ):
+        """
+        Method that allows to obtain the activations related to
+        a series of terms. The terms can be entered in the following formats:
 
+        String: All expressions allowed in neurosynth. It can be
+        a term, a simple logical expression, for example: (reward* | pain*).
+
+        Iterable: A list of terms that will be calculated as a disjunction.
+        This case does not support logical expressions.
+        """
         if image_type is None:
             image_type = f"association-test_z_FDR_{q}"
 
         if self._dataset is None:
             dataset = self.ns_load_dataset()
             self._dataset = dataset
-        if isinstance(terms, list):
+        if not isinstance(terms, str) and isinstance(
+            terms, collections.Iterable
+        ):
             studies_ids = self._dataset.get_studies(
                 features=terms, frequency_threshold=frequency_threshold
             )
@@ -45,6 +69,32 @@ class NeuroSynthHandler(object):
         dim = self._dataset.masker.dims
         region_set = region_set_from_masked_data(masked_data, affine, dim)
         return region_set
+
+    def ns_study_id_set_from_term(self, terms, frequency_threshold=0.05):
+        if self._dataset is None:
+            dataset = self.ns_load_dataset()
+            self._dataset = dataset
+        study_ids = self._dataset.get_studies(
+            features=terms, frequency_threshold=frequency_threshold
+        )
+        return set(StudyID(study_id) for study_id in study_ids)
+
+    def ns_study_tfidf_feature_for_terms(self, terms):
+        if self._dataset is None:
+            dataset = self.ns_load_dataset()
+            self._dataset = dataset
+        feature_table = self._dataset.feature_table.data
+        result_set = set()
+        for term in terms:
+            if term not in feature_table.columns:
+                continue
+            result_set |= set(
+                (StudyID(tupl[0]), term, tupl[1])
+                for tupl in feature_table[[term]].itertuples(
+                    index=True, name=None
+                )
+            )
+        return result_set
 
     def ns_load_dataset(self):
 

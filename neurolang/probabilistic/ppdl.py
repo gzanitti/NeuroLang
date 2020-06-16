@@ -12,7 +12,7 @@ from ..expressions import (
     NeuroLangException,
     Symbol,
 )
-from ..logic import Union, ExistentialPredicate, Implication
+from ..logic import ExistentialPredicate, Implication, Union
 from ..solver_datalog_naive import DatalogBasic, is_conjunctive_expression
 
 

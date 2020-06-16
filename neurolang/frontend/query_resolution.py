@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from typing import AbstractSet, Callable, Tuple
+from typing import AbstractSet, Callable, Tuple, List
 from uuid import uuid1
 
 import numpy as np
@@ -10,7 +10,7 @@ from ..region_solver import Region
 from ..regions import (ExplicitVBR, ImplicitVBR, SphericalVolume,
                        take_principal_regions)
 from ..type_system import Unknown, is_leq_informative
-from .neurosynth_utils import NeuroSynthHandler
+from .neurosynth_utils import NeuroSynthHandler, StudyID, TfIDf
 from .query_resolution_expressions import (All, Exists, Expression, Query,
                                            Symbol)
 
@@ -35,7 +35,7 @@ class QueryBuilderBase:
         if isinstance(symbol_name, Expression):
             symbol_name = symbol_name.expression.name
         if symbol_name not in self.symbol_table:
-            raise ValueError('')
+            raise ValueError(f'Symbol {symbol_name} not defined')
         return Symbol(self, symbol_name)
 
     def __getitem__(self, symbol_name):
@@ -63,8 +63,10 @@ class QueryBuilderBase:
     def environment(self):
         old_dynamic_mode = self._symbols_proxy._dynamic_mode
         self._symbols_proxy._dynamic_mode = True
-        yield self._symbols_proxy
-        self._symbols_proxy._dynamic_mode = old_dynamic_mode
+        try:
+            yield self._symbols_proxy
+        finally:
+            self._symbols_proxy._dynamic_mode = old_dynamic_mode
 
     @property
     @contextmanager
@@ -72,9 +74,11 @@ class QueryBuilderBase:
         old_dynamic_mode = self._symbols_proxy._dynamic_mode
         self._symbols_proxy._dynamic_mode = True
         self.solver.push_scope()
-        yield self._symbols_proxy
-        self.solver.pop_scope()
-        self._symbols_proxy._dynamic_mode = old_dynamic_mode
+        try:
+            yield self._symbols_proxy
+        finally:
+            self.solver.pop_scope()
+            self._symbols_proxy._dynamic_mode = old_dynamic_mode
 
     def new_symbol(self, type_=Unknown, name=None):
         if isinstance(type_, (tuple, list)):
@@ -211,7 +215,11 @@ class RegionMixin:
 
     @staticmethod
     def create_region(spatial_image, label=1, prebuild_tree=False):
-        voxels = np.transpose((spatial_image.get_data() == label).nonzero())
+        voxels = np.transpose(
+            (
+                np.asanyarray(spatial_image.dataobj) == label
+            ).nonzero()
+        )
         if len(voxels) == 0:
             return None
         region = ExplicitVBR(
@@ -268,7 +276,6 @@ class NeuroSynthMixin:
     ):
         if not hasattr(self, 'neurosynth_db'):
             self.neurosynth_db = NeuroSynthHandler()
-
         if not name:
             name = str(uuid1())
         region_set = self.neurosynth_db.ns_region_set_from_term(term, q)
@@ -280,6 +287,30 @@ class NeuroSynthMixin:
             region_set,
             type_=Tuple[ExplicitVBR],
             name=name
+        )
+
+    def load_neurosynth_term_study_ids(
+        self, term: str, name: str = None, frequency_threshold: float = 0.05
+    ):
+        if not hasattr(self, 'neurosynth_db'):
+            self.neurosynth_db = NeuroSynthHandler()
+        if not name:
+            name = str(uuid1())
+        study_set = self.neurosynth_db.ns_study_id_set_from_term(
+            term, frequency_threshold
+        )
+        return self.add_tuple_set(study_set, type_=Tuple[StudyID], name=name)
+
+    def load_neurosynth_study_tfidf_feature_for_terms(
+        self, terms: List[str], name: str = None,
+    ):
+        if not hasattr(self, 'neurosynth_db'):
+            self.neurosynth_db = NeuroSynthHandler()
+        if not name:
+            name = str(uuid1())
+        result_set = self.neurosynth_db.ns_study_tfidf_feature_for_terms(terms)
+        return self.add_tuple_set(
+            result_set, type_=Tuple[StudyID, str, TfIDf], name=name
         )
 
 
@@ -379,6 +410,14 @@ class QuerySymbolsProxy:
 
     def __contains__(self, symbol):
         return symbol in self._query_builder.symbol_table
+
+    def __iter__(self):
+        return iter(
+            sorted(set(
+                s.name for s in
+                self._query_builder.symbol_table
+            ))
+        )
 
     def __len__(self):
         return len(self._query_builder.symbol_table)
