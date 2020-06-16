@@ -3,6 +3,7 @@ from typing import AbstractSet, Any, Callable
 import numpy as np
 
 from .. import neurolang as nl
+from ..datalog import DatalogProgram
 from ..datalog.aggregation import Chase, DatalogWithAggregationMixin
 from ..datalog.constraints_representation import DatalogConstraintsProgram
 from ..expression_walker import (
