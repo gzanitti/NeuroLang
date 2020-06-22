@@ -6,9 +6,9 @@ from ..expression_walker import (
 from ..expressions import Symbol
 from ..logic import Constant, Implication, NaryLogicOperator
 from ..logic.expression_processing import ExtractFreeVariablesWalker
-from ..logic.transformations import CollapseConjunctions
 from ..logic.unification import apply_substitution, most_general_unifier
 from .ontologies_parser import RightImplication
+from ..logic.transformations import CollapseConjunctions
 
 
 class ExtractFreeVariablesRightImplicationWalker(ExtractFreeVariablesWalker):
