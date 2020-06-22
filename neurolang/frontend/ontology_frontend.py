@@ -1,62 +1,62 @@
-from .query_resolution_datalog import QueryBuilderDatalog
-from . import RegionFrontendDatalogSolver
-
-import pandas as pd
-import nibabel as nib
-import numpy as np
 import pickle
 
-from rdflib import OWL, RDFS
-from nilearn import datasets, plotting
+import nibabel as nib
+import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
+from nilearn import datasets, plotting
+from rdflib import OWL, RDFS
 from scipy import special
 from scipy.stats import norm
 
+from neurolang import frontend as fe
 from neurolang.datalog import DatalogProgram
-from neurolang.expressions import Symbol, Constant, ExpressionBlock
-from neurolang.logic import Implication, Union
+from neurolang.datalog.aggregation import (
+    AggregationApplication,
+    Chase,
+    DatalogWithAggregationMixin,
+)
+from neurolang.datalog.chase import (
+    ChaseGeneral,
+    ChaseNaive,
+    ChaseNamedRelationalAlgebraMixin,
+    ChaseSemiNaive,
+)
 from neurolang.datalog.constraints_representation import (
     DatalogConstraintsProgram,
 )
+from neurolang.datalog.expressions import TranslateToLogic
+from neurolang.datalog.ontologies_parser import OntologyParser
+from neurolang.datalog.ontologies_rewriter import OntologyRewriter
 from neurolang.expression_walker import (
     ExpressionBasicEvaluator,
     IdentityWalker,
 )
-from neurolang.datalog.expressions import TranslateToLogic
-from neurolang.datalog.aggregation import DatalogWithAggregationMixin
+from neurolang.expressions import Constant, ExpressionBlock, Symbol
 from neurolang.frontend.query_resolution import RegionMixin
-from neurolang.datalog.aggregation import AggregationApplication, Chase
-from neurolang.regions import (
-    Region,
-    region_union as region_union_,
-    region_intersection as region_intersection_,
-    ExplicitVBR,
-)
-from neurolang import frontend as fe
-from neurolang.datalog.chase import (
-    ChaseSemiNaive,
-    ChaseNaive,
-    ChaseNamedRelationalAlgebraMixin,
-    ChaseGeneral,
-)
-from neurolang.datalog.ontologies_parser import OntologyParser
-from neurolang.datalog.ontologies_rewriter import OntologyRewriter
+from neurolang.logic import Implication, Union
 from neurolang.probabilistic.probdatalog import (
-    ProbDatalogExistentialTranslator,
     GDatalogToProbDatalog,
+    ProbDatalogExistentialTranslator,
     ProbDatalogProgram,
-    conjunct_formulas,
-    is_probabilistic_fact,
-    ground_probdatalog_program,
-    probdatalog_to_datalog,
     build_grounding,
+    conjunct_formulas,
+    ground_probdatalog_program,
+    is_probabilistic_fact,
+    probdatalog_to_datalog,
 )
 from neurolang.probabilistic.probdatalog_gm import (
-    TranslateGroundedProbDatalogToGraphicalModel,
-    SuccQuery,
     QueryGraphicalModelSolver,
+    SuccQuery,
+    TranslateGroundedProbDatalogToGraphicalModel,
 )
 from neurolang.region_solver import RegionSolver
+from neurolang.regions import ExplicitVBR, Region
+from neurolang.regions import region_intersection as region_intersection_
+from neurolang.regions import region_union as region_union_
+
+from . import RegionFrontendDatalogSolver
+from .query_resolution_datalog import QueryBuilderDatalog
 
 
 class Chase(Chase, ChaseNaive, ChaseNamedRelationalAlgebraMixin, ChaseGeneral):
