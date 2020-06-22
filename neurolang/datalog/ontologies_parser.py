@@ -138,7 +138,7 @@ class OntologyParser:
                     f"""Ontology parser doesn\'t handle
                     restrictions of type {res_type}"""
                 )
-
+                
         return union_of_constraints
 
     def _identify_restriction_type(self, list_of_triples):
