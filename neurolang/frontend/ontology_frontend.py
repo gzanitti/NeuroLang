@@ -29,9 +29,7 @@ from . import RegionFrontendDatalogSolver
 from .query_resolution_datalog import QueryBuilderDatalog
 
 
-class ChaseFrontend(
-    ChaseNaive, ChaseNamedRelationalAlgebraMixin, ChaseGeneral
-):
+class ChaseFrontend(Chase, ChaseNamedRelationalAlgebraMixin, ChaseGeneral):
     pass
 
 
@@ -56,9 +54,8 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
 
     def load_ontology(self, paths, load_format="xml"):
         onto = OntologyParser(paths, load_format)
-        d_pred, u_constraints, entailment_rules = onto.parse_ontology()
+        d_pred, u_constraints = onto.parse_ontology()
         self.solver.walk(u_constraints)
-        # self.solver.walk(entailment_rules)
         self.solver.add_extensional_predicate_from_tuples(
             onto.get_triples_symbol(), d_pred[onto.get_triples_symbol()]
         )
@@ -133,12 +130,19 @@ class NeurolangOntologyDL(QueryBuilderDatalog):
 
         return Union(deterministic_program), Union(probabilistic_program)
 
-    def solve_query(self, symbol_prob):
-        det, prob = self.separate_deterministic_probabilistic_code()
-        if len(prob.formulas) > 0:
-            raise NeuroLangNotImplementedError(
-                "The probabilistic solver has not yet been implemented"
-            )
+    def solve_query(self):
+        # det, prob = self.separate_deterministic_probabilistic_code()
+        # if len(prob.formulas) > 0:
+        #    raise NeuroLangNotImplementedError(
+        #        "The probabilistic solver has not yet been implemented"
+        #    )
+
+        det = []
+        for p in self.current_program:
+            det.append(p.expression)
+
+        det = Union((det))
+
         if self.ontology_loaded:
             eB = self.rewrite_database_with_ontology(det)
             self.solver.walk(eB)
