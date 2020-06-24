@@ -14,8 +14,8 @@ from .ontologies_parser import RightImplication
 class ExtractFreeVariablesRightImplicationWalker(ExtractFreeVariablesWalker):
     @add_match(RightImplication)
     def extract_variables_s(self, expression):
-        return self.walk(expression.consequent) - self.walk(
-            expression.antecedent
+        return self.walk(expression.antecedent) - self.walk(
+            expression.consequent
         )
 
 

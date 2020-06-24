@@ -19,7 +19,7 @@ class OntologyParser:
         self.namespaces_dic = None
         self.owl_dic = None
         if isinstance(paths, list):
-            self._load_ontology(paths, [load_format])
+            self._load_ontology(paths, load_format)
         else:
             self._load_ontology([paths], [load_format])
 
@@ -33,6 +33,7 @@ class OntologyParser:
             OWL.minCardinality,
             OWL.maxCardinality,
             OWL.cardinality,
+            OWL.someValuesFrom,
         ]
 
     def _load_ontology(self, paths, load_format):
@@ -116,9 +117,9 @@ class OntologyParser:
         It needs a function "_process_X", where X is the name of
         the restriction to be processed, to be defined.
         """
-        restriction_ids = []
-        for s, _, _ in self.graph.triples((None, None, OWL.Restriction)):
-            restriction_ids.append(s)
+        restriction_ids = [
+            s for s, _, _ in self.graph.triples((None, None, OWL.Restriction))
+        ]
 
         union_of_constraints = Union(())
         for rest in restriction_ids:
@@ -294,6 +295,62 @@ class OntologyParser:
 
         return Union(())
 
+    def _process_someValuesFrom(self, cut_graph):
+        """
+        It defines a class of individuals x for which there is at least one y
+        (either an instance of the class description or value of the data 
+        range) such that the pair (x,y) is an instance of P. This does not
+        exclude that there are other instances (x,y') of P for which y' does
+        not belong to the class description or data range.
+
+        The following example defines a class of individuals which have at 
+        least one parent who is a physician:
+
+        <owl:Restriction>
+            <owl:onProperty rdf:resource="#hasParent" />
+            <owl:someValuesFrom rdf:resource="#Physician" />
+        </owl:Restriction>
+        """
+        parsed_prop, restricted_node, values = self._parse_restriction_nodes(
+            cut_graph
+        )
+
+        nodes_someValuesFrom = self._parse_list(values)
+
+        constraints = Union(())
+        property_symbol = Symbol(parsed_prop)
+        subClassOf = Symbol(str(RDFS.subClassOf))
+        someValuesFrom = Symbol(str(OWL.someValuesFrom))
+        # x = Symbol.fresh()
+        y = Symbol.fresh()
+
+        for value in nodes_someValuesFrom:
+            constraints = Union(
+                constraints.formulas
+                + (
+                    RightImplication(
+                        Conjunction(
+                            (
+                                self._triple(
+                                    Constant(str(restricted_node)),
+                                    subClassOf,
+                                    y,
+                                ),
+                                self._triple(
+                                    y, someValuesFrom, Constant(str(value))
+                                ),
+                            )
+                        ),
+                        property_symbol(
+                            Constant(str(restricted_node)),
+                            Constant(str(value)),
+                        ),
+                    ),
+                )
+            )
+
+        return constraints
+
     def _process_allValuesFrom(self, cut_graph):
         """
         AllValuesFrom defines a class of individuals x
@@ -389,6 +446,9 @@ class OntologyParser:
         values : list
             Array of nodes that are part of the list.
         """
+        if not isinstance(initial_node, BNode):
+            return [initial_node]
+
         list_node = RDF.nil
         values = []
         for node_triples in self.graph.triples((initial_node, None, None)):
