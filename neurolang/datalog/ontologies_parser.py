@@ -29,6 +29,7 @@ class OntologyParser:
 
         self.parsed_restrictions = [
             OWL.allValuesFrom,
+            OWL.someValuesFrom,
             OWL.hasValue,
             OWL.minCardinality,
             OWL.maxCardinality,
