@@ -2,28 +2,31 @@ import collections
 from typing import AbstractSet, Tuple
 from uuid import uuid1
 
-from ..datalog.aggregation import Chase, TranslateToLogicWithAggregation
+from ..datalog.aggregation import (
+    Chase,
+    DatalogWithAggregationMixin,
+    TranslateToLogicWithAggregation
+)
 from ..datalog.constraints_representation import DatalogConstraintsProgram
 from ..datalog.ontologies_parser import OntologyParser
 from ..datalog.ontologies_rewriter import OntologyRewriter
 from ..expression_walker import ExpressionBasicEvaluator
 from ..expressions import Symbol, Unknown
 from ..logic import Union
-from ..probabilistic.cplogic.problog_solver import (
-    solve_succ_all as problog_solve_succ_all,
-)
+from ..probabilistic.cplogic.problog_solver import \
+    solve_succ_all as problog_solve_succ_all
 from ..probabilistic.cplogic.program import (
     CPLogicMixin,
     CPLogicProgram,
-    TranslateProbabilisticQueryMixin,
+    TranslateProbabilisticQueryMixin
 )
 from ..probabilistic.expression_processing import (
-    separate_deterministic_probabilistic_code,
+    separate_deterministic_probabilistic_code
 )
 from ..region_solver import RegionSolver
 from ..relational_algebra import (
     NamedRelationalAlgebraFrozenSet,
-    RelationalAlgebraStringExpression,
+    RelationalAlgebraStringExpression
 )
 from . import QueryBuilderDatalog
 from .query_resolution_expressions import Symbol as FrontEndSymbol
@@ -34,6 +37,7 @@ class RegionFrontendCPLogicSolver(
     TranslateToLogicWithAggregation,
     RegionSolver,
     CPLogicMixin,
+    DatalogWithAggregationMixin,
     DatalogConstraintsProgram,
     ExpressionBasicEvaluator,
 ):

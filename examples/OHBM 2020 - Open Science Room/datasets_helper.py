@@ -31,7 +31,7 @@ def ns_prob_joint_voxel_study(nsh):
     return df[["prob", "voxel", "study"]]
 
 
-def load_auditory_datasets(nl, n=200):
+def load_auditory_datasets(nl):
 
     d_onto = utils._get_dataset_dir("ontologies", data_dir="neurolang_data")
     if not os.path.exists(d_onto + "/neurofma_fma3.0.owl"):
@@ -42,7 +42,7 @@ def load_auditory_datasets(nl, n=200):
 
     nsh = fe.neurosynth_utils.NeuroSynthHandler()
 
-    sample_studies = nsh.ns_study_ids()[:n]
+    sample_studies = nsh.ns_study_ids()
     sample_studies = pd.DataFrame(sample_studies)
     nl.add_uniform_probabilistic_choice_over_set(
         list(sample_studies.itertuples(name=None, index=False)), name="p_study"
@@ -50,7 +50,7 @@ def load_auditory_datasets(nl, n=200):
 
     df = ns_prob_joint_term_study(nsh, term=["auditory"])
     nl.add_probabilistic_facts_from_tuples(
-        df[df.study.isin(sample_studies[0])].itertuples(
+        df.itertuples(
             name=None, index=False
         ),
         name="p_term_study",
@@ -58,7 +58,7 @@ def load_auditory_datasets(nl, n=200):
 
     df = ns_prob_joint_voxel_study(nsh)
     nl.add_probabilistic_facts_from_tuples(
-        df[df.study.isin(sample_studies[0])].itertuples(
+        df.itertuples(
             name=None, index=False
         ),
         name="p_voxel_study",

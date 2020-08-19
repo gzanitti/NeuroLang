@@ -224,6 +224,10 @@ c[1].hist();
 
 c[c[1] >= c[1].quantile(.99)].sort_values(1, ascending=False)
 
+tt = c[c[1] >= c[1].quantile(.99)].sort_values(1, ascending=False)
+tt.rename(columns={0: 'term', 1: 'prob'}, inplace=True)
+tt.head(15)
+
 # # Reverse inference - Example using ontologies
 
 # +
@@ -395,8 +399,10 @@ with nl.scope as e:
     
     nl_results = nl.solve_all()
 
-c = nl_results['res']._container.copy()
-c.sort_values(1, ascending=False)
+c = nl_results['filtered_terms']._container.copy()
+tt = c.sort_values(1, ascending=False)
+tt.rename(columns={0: 'term', 1: 'prob'}, inplace=True)
+tt.head(15)
 
 c[1].hist();
 

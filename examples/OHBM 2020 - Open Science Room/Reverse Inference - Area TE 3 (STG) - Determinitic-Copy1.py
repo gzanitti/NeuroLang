@@ -69,7 +69,7 @@ with nl.scope as e:
     )
     
     e.julich_voxels[e.id_neurosynth, e.x, e.y, e.z] = (
-        e.region_voxels['Area Ia (Insula)', e.id_neurosynth, e.x, e.y, e.z]
+        e.region_voxels['Area TE 3 (STG)', e.id_neurosynth, e.x, e.y, e.z]
     )
     
     
@@ -153,7 +153,7 @@ with nl.scope as e:
     #)
     
     e.julich_voxels[e.id_neurosynth, e.x, e.y, e.z] = (
-        e.region_voxels['Area Ia (Insula)', e.id_neurosynth, e.x, e.y, e.z]
+        e.region_voxels['Area TE 3 (STG)', e.id_neurosynth, e.x, e.y, e.z]
     )
     
     e.term_docs[e.term, e.pmid] = (
@@ -304,7 +304,7 @@ with nl.scope as e:
     #)
     
     e.julich_voxels[e.id_neurosynth, e.x, e.y, e.z] = (
-        e.region_voxels['Area Ia (Insula)', e.id_neurosynth, e.x, e.y, e.z]
+        e.region_voxels['Area TE 3 (STG)', e.id_neurosynth, e.x, e.y, e.z]
     )
     
     e.term_docs[e.term, e.pmid] = (
@@ -360,12 +360,7 @@ def words(x: Iterable) -> str:
     return " ".join(b)
 
 @nl.add_symbol
-def word_lower(name: str) -> str:
-    print(name)
-    return str(name).lower()
-
-@nl.add_symbol
-def is_in(x: str, l: str) -> bool:
+def is_in(x: str, l: str) -> str:
     b = l.split(' ')
     if x in b:
         return True
@@ -379,18 +374,8 @@ hasTopConcept = nl.new_symbol(name='http://www.w3.org/2004/02/skos/core#hasTopCo
 with nl.scope as e:
     #e.pre_part[e.x, e.y] = part_of[e.x, e.y]
 
-    #e.ontology_terms[e.term] = (
-    #    e.pre_part["Auditory", e.y] & subclass_of[e.z, e.y] & label(e.z, e.n) &
-    #    (e.term == nl.symbols.first_word(e.n))
-    #)
-    
-    #e.ontology_terms[e.words(e.name)] = (
-    #    hasTopConcept[e.uri, 'Executive-Cognitive Control'] &
-    #    label[e.uri, e.name]
-    #)
-    
     e.ontology_terms[e.name] = (
-        hasTopConcept[e.uri, 'Executive-Cognitive Control'] &
+        hasTopConcept[e.uri, 'Perception'] &
         label[e.uri, e.name]
     )
     
@@ -422,28 +407,15 @@ julich_voxels = nl.add_tuple_set(tuple(f), name='ontology_terms');
 t = nl_results['e_term_given_aud_act'].as_numpy_array()
 f = [(term, p) for term, p in t]
 julich_voxels = nl.add_tuple_set(tuple(f), name='reverse_inference');
-
-# +
+# -
 
 with nl.scope as e:
     e.filtered_terms[e.term, e.p] = (
-        e.reverse_inference[e.term, e.p] &
-        e.ontology_terms[e.term]
+        e.ontology_terms[e.term] & 
+        e.reverse_inference[e.term, e.p]
     )
     
-    
-
-#with nl.scope as e:
-#    e.filtered_terms[e.term, e.p] = (
-#        e.ontology_terms[e.t] & 
-#        e.reverse_inference[e.term, e.p] &
-#        is_in[e.term, e.t]
-#    )
-    
     nl_results = nl.solve_all()
-# -
-
-nl_results['filtered_terms']
 
 c = nl_results['filtered_terms']._container.copy()
 tt = c.sort_values(1, ascending=False)
@@ -471,3 +443,12 @@ control = g.triples((None, rdflib.term.URIRef('http://www.w3.org/2004/02/skos/co
 for a, b, c in control:
     n = list(g.triples((a, rdflib.term.URIRef('http://www.w3.org/2000/01/rdf-schema#label'), None)))
     print(n[0][2])
+
+topCon = set()
+for a in g.triples((None, rdflib.term.URIRef('http://www.w3.org/2004/02/skos/core#hasTopConcept'), None)):
+    topCon.add(a[2])
+
+
+topCon
+
+
