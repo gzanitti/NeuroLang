@@ -302,7 +302,19 @@ conc_img = image.resample_img(
     conc_img, mni_t1.affine, interpolation='nearest'
 )
 
-ns_conn = image.load_img(f'/Users/gzanitti/Projects/INRIA/functional_connectivity_-48_24_-10.nii.gz')
+func_conn = datasets.utils._fetch_files(
+    datasets.utils._get_dataset_dir('neurosynth'),
+    [
+        (
+            'functional_connectivity_-48_24_-10.nii.gz',
+            'https://github.com/NeuroLang/neurolang_data/blob'
+            '/main/NS/Locations/functional_connectivity_-48_24_-10.nii.gz?raw=true',
+            {'move': 'functional_connectivity_-48_24_-10.nii.gz'}
+        )
+    ]
+)[0]
+
+ns_conn = image.load_img(func_conn)
 ns_conn = image.resample_img(
     ns_conn, mni_t1.affine, interpolation='nearest'
 )
