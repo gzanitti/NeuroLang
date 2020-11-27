@@ -259,14 +259,13 @@ dilated_ifg44 = nl.add_tuple_set(
 )
 # -
 
- with nl.scope as e:
-
+with nl.scope as e:
     e.local_areas[e.area, e.id] = (
         e.julich_brain[e.i, e.j, e.k, e.id] &
         e.dilated_ifg44[e.i, e.j, e.k,] &
         e.julich_regions[e.area, e.id, e.hemis]
     )
-    
+
     res = nl.solve_all()
     local_areas = res['local_areas'].as_pandas_dataframe()
 
@@ -307,8 +306,8 @@ func_conn = datasets.utils._fetch_files(
     [
         (
             'functional_connectivity_-48_24_-10.nii.gz',
-            'https://github.com/NeuroLang/neurolang_data/blob'
-            '/main/NS/Locations/functional_connectivity_-48_24_-10.nii.gz?raw=true',
+            'https://github.com/NeuroLang/neurolang_data/raw/main/NS'
+            '/Locations/functional_connectivity_-48_24_-10.nii.gz',
             {'move': 'functional_connectivity_-48_24_-10.nii.gz'}
         )
     ]
