@@ -121,7 +121,7 @@ for elem in regions:
     f.close()   
     regions = pd.DataFrame(triples, columns=['r_name', 'r_number']).astype({'r_number': 'int32'}).sort_values('r_number')
     regions.drop_duplicates(inplace=True)
-    
+
 
 # +
 regions2 = regions.copy()
@@ -270,8 +270,7 @@ with nl.scope as e:
     local_areas = res['local_areas'].as_pandas_dataframe()
 
 
-# +
-#local_areas['area'].unique()
+local_areas['area'].unique()
 
 # +
 for v in zip(*img_l_unmaskes):
@@ -417,7 +416,7 @@ long_regions
 #regions['r_name'] = regions.r_name.apply(lambda x: x.replace('.', ''))
 # -
 
-#corr44 = pd.DataFrame(zip(area_44_con, regions.r_name.values, regions.r_number.values), columns=['corr', 'r_name', 'r_number'])
+# corr44 = pd.DataFrame(zip(area_44_con, regions.r_name.values, regions.r_number.values), columns=['corr', 'r_name', 'r_number'])
 
 
 # +
@@ -505,7 +504,7 @@ def word_lower(name: str) -> str:
 
 # -
 
-# ## Long network
+# ## Query for both networks
 
 with nl.scope as e:
     e.ontology_terms[e.onto_name] = (
@@ -553,51 +552,46 @@ with nl.scope as e:
         (e.id != analized_region_number)
     )
     
-    #e.just_local[e.d, e.id, e.id2] = (
-    #    e.local_network[e.d, e.id] &
-    #    (~e.long_network[e.d, e.id2]) &
-    #    e.julich_regions[..., e.id2, ...]
-    #)
-    
-    #e.just_long[e.d, e.id] = (
-    #    e.long_network[e.d, e.id] &
-    #    (~e.local_network[e.d, e.id2]) &
-    #    e.julich_regions[..., e.id2, ...]
-    #)
-    
-    #e.result_local[e.t, e.PROB[e.t]] = (
-    #   (e.terms[e.d, e.t] & e.filtered_terms[e.t]  ) // 
-    #    (e.docs[e.d] & e.just_local[e.d, e.id, e.id2])  
-    #)
-    
-    #e.result_long[e.t, e.PROB[e.t]] = (
-    #   (e.terms[e.d, e.t]   ) // 
-    #    (e.docs[e.d] & e.just_long[e.d, e.id])  
-    #)
-    
-    res = nl.solve_all()
-
-
-filtered_terms = nl.add_tuple_set(res['filtered_terms'].as_pandas_dataframe().values, name='filtered_terms')
-local_network = nl.add_tuple_set(res['local_network'].as_pandas_dataframe().values, name='local_network')
-long_network = nl.add_tuple_set(res['long_network'].as_pandas_dataframe().values, name='long_network')
-
-with nl.scope as e:
-    
     e.just_long[e.d, e.id] = (
         e.long_network[e.d, e.id] &
-        (~e.local_network[e.d, e.id2]) &
-        e.julich_regions[..., e.id2, ...]
+        ~nl.exists(
+            e.id2,
+            e.local_network[e.d, e.id2]
+        )
     )
     
-    #e.result_long[e.t, e.PROB[e.t]] = (
-    #   (e.terms[e.d, e.t] & e.filtered_terms[e.t] ) // 
-    #    (e.docs[e.d] & e.just_long[e.d, e.id])  
-    #)
+    e.just_local[e.d, e.id] = (
+        e.local_network[e.d, e.id] &
+        ~nl.exists(
+            e.id2,
+            e.long_network[e.d, e.id2]
+        )
+    )
+    
+    e.long_names[e.name] = (
+        e.just_long[e.d, e.id] &
+        e.julich_regions[e.name, e.id]
+    )
+    
+    e.local_names[e.name] = (
+        e.just_local[e.d, e.id] &
+        e.julich_regions[e.name, e.id]
+    )
+    
+    e.result_local[e.t, e.PROB[e.t]] = (
+       (e.terms[e.d, e.t] & e.filtered_terms[e.t]  ) // 
+        (e.docs[e.d] & e.just_local[e.d, e.id, e.id2])  
+    )
+    
+    e.result_long[e.t, e.PROB[e.t]] = (
+       (e.terms[e.d, e.t] & e.filtered_terms[e.t]) // 
+        (e.docs[e.d] & e.just_long[e.d, e.id])  
+    )
     
     res = nl.solve_all()
 
 
+# ## Long network results
 
 # +
 for v in zip(*img_l_unmaskes):
@@ -626,6 +620,8 @@ wb = nib.spatialimages.SpatialImage(d, conc_img.affine)
 plotting.view_img(wb)
 # -
 
+pd.DataFrame(res['long_names'].as_pandas_dataframe().name.unique(), columns=['area'])
+
 c_long = res['result_long']._container.copy()
 c_long.rename({0:'t', 1:'PROB'}, inplace=True, axis=1)
 c_long.drop_duplicates(['t'], inplace=True)
@@ -639,85 +635,7 @@ import matplotlib.pyplot as plt
 plt.plot(c_long.sort_values(['PROB'])['PROB'].values.T)
 plt.axhline(c_long.PROB.quantile(.95))
 # -
-
-
-
-
-
-# ## Local network
-
-with nl.scope as e:
-    e.ontology_terms[e.onto_name] = (
-        hasTopConcept[e.uri, e.cp] &
-        label[e.uri, e.onto_name]
-    )
-    
-    e.filtered_terms[e.term] = (
-        e.term == 'motor'
-    )
-
-    e.filtered_terms[e.term] = (
-        e.ontology_terms[e.onto_term] &
-        (e.term == word_lower[e.onto_term])
-    )
-
-    e.long_regions[e.d, e.id] = (
-        e.long_areas[e.area, e.id] &
-        e.julich_brain[e.i, e.j, e.k, e.id] &
-        e.activations[
-            e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
-            ..., ..., ..., e.i, e.j, e.k
-        ]
-    )
-    
-    e.long_network[e.d, e.id] = (
-        e.long_regions[e.d, analized_region_number] &
-        e.long_regions[e.d, e.id] &
-        (e.id != analized_region_number)
-    )
-    
-    e.local_regions[e.d, e.id] = (
-        e.dilated_ifg44[e.i, e.j, e.k,] &
-        e.julich_regions[e.area, e.id] &
-        e.julich_brain[e.i, e.j, e.k, e.id] &
-        e.activations[
-            e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
-            ..., ..., ..., e.i, e.j, e.k
-        ]
-    )
-    
-    e.local_network[e.d, e.id] = (
-        e.local_regions[e.d, e.id] &
-        e.local_regions[e.d, analized_region_number] &
-        (e.id != analized_region_number)
-    )
-    
-    e.just_local[e.d, e.id, e.id2] = (
-        e.local_network[e.d, e.id] &
-        (~e.long_network[e.d, e.id2]) &
-        e.julich_regions[..., e.id2, ...]
-    )
-    
-    e.result_local[e.t, e.PROB[e.t]] = (
-       (e.terms[e.d, e.t] & e.filtered_terms[e.t]  ) // 
-        (e.docs[e.d] & e.just_local[e.d, e.id, e.id2])  
-    )
-    
-    res = nl.solve_all()
-
-
-c_local = res['result_local']._container.copy()
-c_local.rename({0:'t', 1:'PROB'}, inplace=True, axis=1)
-c_local.drop_duplicates(['t'], inplace=True)
-c_local = c_local[['t', 'PROB']]
-final_local = c_local[c_local['PROB'] >= c_local['PROB'].quantile(.95)].sort_values('PROB', ascending=False)
-final_local.reset_index(drop=True)
-
-# +
-import matplotlib.pyplot as plt
-
-plt.plot(c_local.sort_values(['PROB'])['PROB'].values.T)
-plt.axhline(c_local.PROB.quantile(.95))
+# ## Local network results
 
 # +
 for v in zip(*img_l_unmaskes):
@@ -744,3 +662,22 @@ wb = nib.spatialimages.SpatialImage(d, conc_img.affine)
 
 #plotting.plot_roi(wb, display_mode='y', threshold=0.1, alpha=0.9, cmap='tab20b', cut_coords=np.linspace(-70, 70, 8))
 plotting.view_img(wb)
+# -
+
+pd.DataFrame(res['local_names'].as_pandas_dataframe().name.unique(), columns=['area'])
+
+c_local = res['result_local']._container.copy()
+c_local.rename({0:'t', 1:'PROB'}, inplace=True, axis=1)
+c_local.drop_duplicates(['t'], inplace=True)
+c_local = c_local[['t', 'PROB']]
+final_local = c_local[c_local['PROB'] >= c_local['PROB'].quantile(.95)].sort_values('PROB', ascending=False)
+final_local.reset_index(drop=True)
+
+# +
+import matplotlib.pyplot as plt
+
+plt.plot(c_local.sort_values(['PROB'])['PROB'].values.T)
+plt.axhline(c_local.PROB.quantile(.95))
+# -
+
+
