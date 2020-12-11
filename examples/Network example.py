@@ -414,9 +414,9 @@ long_regions
 
 # +
 #regions['r_name'] = regions.r_name.apply(lambda x: x.replace('.', ''))
-# -
 
-# corr44 = pd.DataFrame(zip(area_44_con, regions.r_name.values, regions.r_number.values), columns=['corr', 'r_name', 'r_number'])
+# +
+#corr44 = pd.DataFrame(zip(area_44_con, regions.r_name.values, regions.r_number.values), columns=['corr', 'r_name', 'r_number'])
 
 
 # +
@@ -478,14 +478,25 @@ ns_terms = (
             ns_features,
             var_name='term', id_vars='pmid', value_name='TfIdf'
        )
-    .query('TfIdf > 1e-3')[['pmid', 'term']]
+    .query('TfIdf > 0')
 )
+ns_terms['prob'] = ns_terms.apply(lambda x: (1 / (1 + np.exp(-3000 * (x.TfIdf - 0.01)) + 1)), axis=1)
+ns_terms = ns_terms[['prob', 'pmid', 'term']]
 
 activations = nl.add_tuple_set(ns_database.values, name='activations')
-terms = nl.add_tuple_set(ns_terms.values, name='terms')
+terms = nl.add_probabilistic_facts_from_tuples(ns_terms.itertuples(index=False), name='terms')
 docs = nl.add_uniform_probabilistic_choice_over_set(
         ns_docs.values, name='docs'
 )
+
+from sklearn.model_selection import KFold
+kfold = KFold(n_splits=20, shuffle=True, random_state=42)
+
+ns_doc_folds = pd.concat(
+    ns_docs.iloc[train].assign(fold=[i] * len(train))
+    for i, (train, _) in enumerate(kfold.split(ns_docs))
+)
+doc_folds = nl.add_tuple_set(ns_doc_folds, name='doc_folds')
 
 from rdflib import RDFS
 
@@ -500,6 +511,15 @@ from typing import Iterable
 @nl.add_symbol
 def word_lower(name: str) -> str:
     return name.lower()
+
+@nl.add_symbol
+def mean(iterable: Iterable) -> float:
+    return np.mean(iterable)
+
+
+@nl.add_symbol
+def std(iterable: Iterable) -> float:
+    return np.std(iterable)
 
 
 # -
@@ -578,14 +598,48 @@ with nl.scope as e:
         e.julich_regions[e.name, e.id]
     )
     
-    e.result_local[e.t, e.PROB[e.t]] = (
-       (e.terms[e.d, e.t] & e.filtered_terms[e.t]  ) // 
+    e.result_local[e.t, e.fold, e.PROB[e.t, e.fold]] = (
+       (e.docs[e.d] & e.doc_folds[e.d, e.fold] &
+        e.terms[e.d, e.t] & e.filtered_terms[e.t]) // 
         (e.docs[e.d] & e.just_local[e.d, e.id, e.id2])  
     )
     
-    e.result_long[e.t, e.PROB[e.t]] = (
-       (e.terms[e.d, e.t] & e.filtered_terms[e.t]) // 
+    e.result_long[e.t, e.fold, e.PROB[e.t, e.fold]] = (
+       (e.docs[e.d] & e.doc_folds[e.d, e.fold] & 
+        e.terms[e.d, e.t] & e.filtered_terms[e.t]) // 
         (e.docs[e.d] & e.just_long[e.d, e.id])  
+    )
+    
+    
+    e.result_long_mean[e.term, e.mean(e.PROB)] = (
+        e.result_long[e.term, e.fold, e.PROB]    
+    )
+
+    e.result_long_std[e.term, e.std(e.PROB)] = (
+        e.result_long[e.term, e.fold, e.PROB]
+    )
+
+    e.result_long_summary_stats[
+        e.term, e.prob_mean, e.prob_std
+    ] = (
+        e.result_long_mean[e.term, e.prob_mean] &
+        e.result_long_std[e.term, e.prob_std]
+    )
+    
+    
+    e.result_local_mean[e.term, e.mean(e.PROB)] = (
+        e.result_local[e.term, e.fold, e.PROB]    
+    )
+
+    e.result_local_std[e.term, e.std(e.PROB)] = (
+        e.result_local[e.term, e.fold, e.PROB]
+    )
+
+    e.result_local_summary_stats[
+        e.term, e.prob_mean, e.prob_std
+    ] = (
+        e.result_local_mean[e.term, e.prob_mean] &
+        e.result_local_std[e.term, e.prob_std]
     )
     
     res = nl.solve_all()
@@ -622,19 +676,40 @@ plotting.view_img(wb)
 
 pd.DataFrame(res['long_names'].as_pandas_dataframe().name.unique(), columns=['area'])
 
-c_long = res['result_long']._container.copy()
-c_long.rename({0:'t', 1:'PROB'}, inplace=True, axis=1)
-c_long.drop_duplicates(['t'], inplace=True)
-c_long = c_long[['t', 'PROB']]
-final_local = c_long[c_long['PROB'] >= c_long['PROB'].quantile(.95)].sort_values('PROB', ascending=False)
-final_local.reset_index(drop=True)
-
 # +
 import matplotlib.pyplot as plt
 
-plt.plot(c_long.sort_values(['PROB'])['PROB'].values.T)
-plt.axhline(c_long.PROB.quantile(.95))
+result_summary_stats = res['result_long_summary_stats']._container.copy()
+result_order = result_summary_stats['prob_mean'].argsort()
+mean_prob = result_summary_stats.iloc[result_order]['prob_mean']
+std_prob = result_summary_stats.iloc[result_order]['prob_std']
+plt.plot(mean_prob.values)
+plt.fill_between(
+    np.arange(len(mean_prob)),
+    mean_prob.values - 3 * std_prob.values,
+    mean_prob.values + 3 * std_prob.values,
+    alpha=.4
+)
+plt.axhline(np.percentile(mean_prob.values, 95), c='r')
 # -
+
+result_summary_stats = res['result_long_summary_stats']._container.copy()
+thr = np.percentile(result_summary_stats['prob_mean'], 95)
+sel_terms = (
+    result_summary_stats
+    .query('prob_mean >= @thr')
+    .reset_index()
+    .term
+    .unique()
+)
+results_summary_stats_thr = (
+    result_summary_stats
+    .query('term in @sel_terms')
+    .reset_index()
+    .sort_values(['prob_mean'], ascending=False)
+)
+results_summary_stats_thr
+
 # ## Local network results
 
 # +
@@ -666,18 +741,37 @@ plotting.view_img(wb)
 
 pd.DataFrame(res['local_names'].as_pandas_dataframe().name.unique(), columns=['area'])
 
-c_local = res['result_local']._container.copy()
-c_local.rename({0:'t', 1:'PROB'}, inplace=True, axis=1)
-c_local.drop_duplicates(['t'], inplace=True)
-c_local = c_local[['t', 'PROB']]
-final_local = c_local[c_local['PROB'] >= c_local['PROB'].quantile(.95)].sort_values('PROB', ascending=False)
-final_local.reset_index(drop=True)
+result_summary_stats = res['result_local_summary_stats']._container.copy()
+result_order = result_summary_stats['prob_mean'].argsort()
+mean_prob = result_summary_stats.iloc[result_order]['prob_mean']
+std_prob = result_summary_stats.iloc[result_order]['prob_std']
+plt.plot(mean_prob.values)
+plt.fill_between(
+    np.arange(len(mean_prob)),
+    mean_prob.values - 3 * std_prob.values,
+    mean_prob.values + 3 * std_prob.values,
+    alpha=.4
+)
+plt.axhline(np.percentile(mean_prob.values, 95), c='r')
 
-# +
-import matplotlib.pyplot as plt
+result_summary_stats = res['result_local_summary_stats']._container.copy()
+thr = np.percentile(result_summary_stats['prob_mean'], 95)
+sel_terms = (
+    result_summary_stats
+    .query('prob_mean >= @thr')
+    .reset_index()
+    .term
+    .unique()
+)
+results_summary_stats_thr = (
+    result_summary_stats
+    .query('term in @sel_terms')
+    .reset_index()
+    .sort_values(['prob_mean'], ascending=False)
+)
+results_summary_stats_thr
 
-plt.plot(c_local.sort_values(['PROB'])['PROB'].values.T)
-plt.axhline(c_local.PROB.quantile(.95))
-# -
+
+
 
 
