@@ -317,7 +317,7 @@ def std(iterable: Iterable) -> float:
 #['Area Id7 (Insula)',1105],
 # -
 
-# ### GapMap Frontal-I (GapMap)
+# ### DMPC - GapMap Frontal-I (GapMap)
 
 with nl.scope as e:
     
@@ -592,8 +592,8 @@ with nl.scope as e:
     #    e.activations[
     #        e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
     #        ..., ..., ..., e.i, e.j, e.k
-        ]
-    )
+    #    ]
+    #)
     
     #e.filtered_regions[e.d, e.i, e.j, e.k] = (
     #    e.julich_brain[e.i, e.j, e.k, 90] &
@@ -685,3 +685,5 @@ results_summary_stats_thr = (
     .sort_values(['prob_mean'], ascending=False)
 )
 results_summary_stats_thr
+
+
