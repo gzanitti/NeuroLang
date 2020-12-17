@@ -292,50 +292,7 @@ def std(iterable: Iterable) -> float:
 
 # -
 
-# ## Query for both networks
-
-with nl.scope as e:
-    
-    e.ontology_terms[e.cp, e.onto_name] = (
-        hasTopConcept[e.uri, e.cp] &
-        label[e.uri, e.onto_name]
-    )
-
-    e.filtered_terms[e.cp, e.lower_name] = (
-        e.ontology_terms[e.cp, e.term] &
-        (e.lower_name == word_lower[e.term])
-    )
-
-    e.filtered_regions[e.d, e.i, e.j, e.k] = (
-        e.julich_brain[e.i, e.j, e.k, 13] &
-        e.activations[
-            e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
-            ..., ..., ..., e.i, e.j, e.k
-        ]
-    )
-    
-    e.filtered_regions[e.d, e.i, e.j, e.k] = (
-        e.julich_brain[e.i, e.j, e.k, 1013] &
-        e.activations[
-            e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
-            ..., ..., ..., e.i, e.j, e.k
-        ]
-    )
-
-    e.term_prob[e.t, e.PROB[e.t]] = (
-        (e.terms[e.d, e.t] & e.docs[e.d])
-        // (
-            e.docs[e.d] &
-            e.filtered_regions[e.d, e.i, e.j, e.k]
-        )
-    )
-
-    e.result[e.term, e.PROB] = (
-        e.term_prob[e.term, e.PROB] &
-        e.filtered_terms(e.cp, e.term)
-    )
-
-    rest = nl.solve_all()
+# # Query for regions
 
 # +
 #References:
@@ -360,6 +317,371 @@ with nl.scope as e:
 #['Area Id7 (Insula)',1105],
 # -
 
-rest['result'].as_pandas_dataframe().sort_values('PROB', ascending=False).head(20)
+# ### GapMap Frontal-I (GapMap)
 
+with nl.scope as e:
+    
+    e.ontology_terms[e.onto_name] = (
+        hasTopConcept[e.uri, e.cp] &
+        label[e.uri, e.onto_name]
+    )
 
+    e.filtered_terms[e.lower_name] = (
+        e.ontology_terms[e.term] &
+        (e.lower_name == word_lower[e.term])
+    )
+
+    e.filtered_regions[e.d, e.i, e.j, e.k] = (
+        e.julich_brain[e.i, e.j, e.k, 13] &
+        e.activations[
+            e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
+            ..., ..., ..., e.i, e.j, e.k
+        ]
+    )
+    
+    e.filtered_regions[e.d, e.i, e.j, e.k] = (
+        e.julich_brain[e.i, e.j, e.k, 1013] &
+        e.activations[
+            e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
+            ..., ..., ..., e.i, e.j, e.k
+        ]
+    )
+
+    e.term_prob[e.t, e.fold, e.PROB[e.t, e.fold]] = (
+        (e.terms[e.d, e.t] & e.docs[e.d] & 
+         e.doc_folds[e.d, e.fold] & e.filtered_terms(e.t))
+        // (
+            e.docs[e.d] &
+            e.filtered_regions[e.d, e.i, e.j, e.k]
+        )
+    )
+    
+    e.result_mean[e.term, e.mean(e.PROB)] = (
+        e.term_prob[e.term, e.fold, e.PROB]    
+    )
+
+    e.result_std[e.term, e.std(e.PROB)] = (
+        e.term_prob[e.term, e.fold, e.PROB]
+    )
+    
+    e.result_summary_stats[
+        e.term, e.prob_mean, e.prob_std
+    ] = (
+        e.result_mean[e.term, e.prob_mean] &
+        e.result_std[e.term, e.prob_std]
+    )
+
+    res = nl.solve_all()
+
+result_summary_stats = res['result_summary_stats']._container.copy()
+thr = np.percentile(result_summary_stats['prob_mean'], 95)
+sel_terms = (
+    result_summary_stats
+    .query('prob_mean >= @thr')
+    .reset_index()
+    .term
+    .unique()
+)
+results_summary_stats_thr = (
+    result_summary_stats
+    .query('term in @sel_terms')
+    .reset_index()
+    .sort_values(['prob_mean'], ascending=False)
+)
+results_summary_stats_thr
+
+# ### GapMap Frontal-II (GapMap)
+
+with nl.scope as e:
+    
+    e.ontology_terms[e.onto_name] = (
+        hasTopConcept[e.uri, e.cp] &
+        label[e.uri, e.onto_name]
+    )
+
+    e.filtered_terms[e.lower_name] = (
+        e.ontology_terms[e.term] &
+        (e.lower_name == word_lower[e.term])
+    )
+
+    e.filtered_regions[e.d, e.i, e.j, e.k] = (
+        e.julich_brain[e.i, e.j, e.k, 89] &
+        e.activations[
+            e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
+            ..., ..., ..., e.i, e.j, e.k
+        ]
+    )
+    
+    e.filtered_regions[e.d, e.i, e.j, e.k] = (
+        e.julich_brain[e.i, e.j, e.k, 1089] &
+        e.activations[
+            e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
+            ..., ..., ..., e.i, e.j, e.k
+        ]
+    )
+
+    e.term_prob[e.t, e.fold, e.PROB[e.t, e.fold]] = (
+        (e.terms[e.d, e.t] & e.docs[e.d] & 
+         e.doc_folds[e.d, e.fold] & e.filtered_terms(e.t))
+        // (
+            e.docs[e.d] &
+            e.filtered_regions[e.d, e.i, e.j, e.k]
+        )
+    )
+    
+    e.result_mean[e.term, e.mean(e.PROB)] = (
+        e.term_prob[e.term, e.fold, e.PROB]    
+    )
+
+    e.result_std[e.term, e.std(e.PROB)] = (
+        e.term_prob[e.term, e.fold, e.PROB]
+    )
+    
+    e.result_summary_stats[
+        e.term, e.prob_mean, e.prob_std
+    ] = (
+        e.result_mean[e.term, e.prob_mean] &
+        e.result_std[e.term, e.prob_std]
+    )
+
+    res = nl.solve_all()
+
+result_summary_stats = res['result_summary_stats']._container.copy()
+thr = np.percentile(result_summary_stats['prob_mean'], 95)
+sel_terms = (
+    result_summary_stats
+    .query('prob_mean >= @thr')
+    .reset_index()
+    .term
+    .unique()
+)
+results_summary_stats_thr = (
+    result_summary_stats
+    .query('term in @sel_terms')
+    .reset_index()
+    .sort_values(['prob_mean'], ascending=False)
+)
+results_summary_stats_thr
+
+# ## Area Id7 (Insula)
+
+with nl.scope as e:
+    
+    e.ontology_terms[e.onto_name] = (
+        hasTopConcept[e.uri, e.cp] &
+        label[e.uri, e.onto_name]
+    )
+
+    e.filtered_terms[e.lower_name] = (
+        e.ontology_terms[e.term] &
+        (e.lower_name == word_lower[e.term])
+    )
+
+    e.filtered_regions[e.d, e.i, e.j, e.k] = (
+        e.julich_brain[e.i, e.j, e.k, 105] &
+        e.activations[
+            e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
+            ..., ..., ..., e.i, e.j, e.k
+        ]
+    )
+    
+    e.filtered_regions[e.d, e.i, e.j, e.k] = (
+        e.julich_brain[e.i, e.j, e.k, 1105] &
+        e.activations[
+            e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
+            ..., ..., ..., e.i, e.j, e.k
+        ]
+    )
+
+    e.term_prob[e.t, e.fold, e.PROB[e.t, e.fold]] = (
+        (e.terms[e.d, e.t] & e.docs[e.d] & 
+         e.doc_folds[e.d, e.fold] & e.filtered_terms(e.t))
+        // (
+            e.docs[e.d] &
+            e.filtered_regions[e.d, e.i, e.j, e.k]
+        )
+    )
+    
+    e.result_mean[e.term, e.mean(e.PROB)] = (
+        e.term_prob[e.term, e.fold, e.PROB]    
+    )
+
+    e.result_std[e.term, e.std(e.PROB)] = (
+        e.term_prob[e.term, e.fold, e.PROB]
+    )
+    
+    e.result_summary_stats[
+        e.term, e.prob_mean, e.prob_std
+    ] = (
+        e.result_mean[e.term, e.prob_mean] &
+        e.result_std[e.term, e.prob_std]
+    )
+
+    res = nl.solve_all()
+
+result_summary_stats = res['result_summary_stats']._container.copy()
+thr = np.percentile(result_summary_stats['prob_mean'], 95)
+sel_terms = (
+    result_summary_stats
+    .query('prob_mean >= @thr')
+    .reset_index()
+    .term
+    .unique()
+)
+results_summary_stats_thr = (
+    result_summary_stats
+    .query('term in @sel_terms')
+    .reset_index()
+    .sort_values(['prob_mean'], ascending=False)
+)
+results_summary_stats_thr
+
+# ## Amygdala 
+
+# +
+#['CM (Amygdala)', 43],
+#['VTM (Amygdala)', 79],
+#['LB (Amygdala)', 90],
+#['MF (Amygdala)', 103],
+#['SF (Amygdala)', 109],
+#['CM (Amygdala)', 1043],
+#['VTM (Amygdala)', 1079],
+#['LB (Amygdala)', 1090],
+#['MF (Amygdala)', 1103],
+#['SF (Amygdala)', 1109],
+# -
+
+with nl.scope as e:
+    
+    e.ontology_terms[e.onto_name] = (
+        hasTopConcept[e.uri, e.cp] &
+        label[e.uri, e.onto_name]
+    )
+
+    e.filtered_terms[e.lower_name] = (
+        e.ontology_terms[e.term] &
+        (e.lower_name == word_lower[e.term])
+    )
+
+    e.filtered_regions[e.d, e.i, e.j, e.k] = (
+        e.julich_brain[e.i, e.j, e.k, 43] &
+        e.activations[
+            e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
+            ..., ..., ..., e.i, e.j, e.k
+        ]
+    )
+    
+    e.filtered_regions[e.d, e.i, e.j, e.k] = (
+        e.julich_brain[e.i, e.j, e.k, 1043] &
+        e.activations[
+            e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
+            ..., ..., ..., e.i, e.j, e.k
+        ]
+    )
+    
+    #e.filtered_regions[e.d, e.i, e.j, e.k] = (
+    #    e.julich_brain[e.i, e.j, e.k, 79] &
+    #    e.activations[
+    #        e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
+    #        ..., ..., ..., e.i, e.j, e.k
+    #    ]
+    #)
+    
+    #e.filtered_regions[e.d, e.i, e.j, e.k] = (
+    #    e.julich_brain[e.i, e.j, e.k, 1079] &
+    #    e.activations[
+    #        e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
+    #        ..., ..., ..., e.i, e.j, e.k
+        ]
+    )
+    
+    #e.filtered_regions[e.d, e.i, e.j, e.k] = (
+    #    e.julich_brain[e.i, e.j, e.k, 90] &
+    #    e.activations[
+    #        e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
+    #        ..., ..., ..., e.i, e.j, e.k
+    #    ]
+    #)
+    
+    #e.filtered_regions[e.d, e.i, e.j, e.k] = (
+    #    e.julich_brain[e.i, e.j, e.k, 1090] &
+    #    e.activations[
+    #        e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
+    #        ..., ..., ..., e.i, e.j, e.k
+    #    ]
+    #)
+    
+    #e.filtered_regions[e.d, e.i, e.j, e.k] = (
+    #    e.julich_brain[e.i, e.j, e.k, 103] &
+    #    e.activations[
+    #        e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
+    #        ..., ..., ..., e.i, e.j, e.k
+    #    ]
+    #)
+    
+    #e.filtered_regions[e.d, e.i, e.j, e.k] = (
+    #    e.julich_brain[e.i, e.j, e.k, 1103] &
+    #    e.activations[
+    #        e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
+    #        ..., ..., ..., e.i, e.j, e.k
+    #    ]
+    #)
+    
+    #e.filtered_regions[e.d, e.i, e.j, e.k] = (
+    #    e.julich_brain[e.i, e.j, e.k, 109] &
+    #    e.activations[
+    #        e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
+    #        ..., ..., ..., e.i, e.j, e.k
+    #    ]
+    #)
+    
+    #e.filtered_regions[e.d, e.i, e.j, e.k] = (
+    #    e.julich_brain[e.i, e.j, e.k, 1109] &
+    #    e.activations[
+    #        e.d, ..., ..., ..., ..., 'MNI', ..., ..., ..., ...,
+    #        ..., ..., ..., e.i, e.j, e.k
+    #    ]
+    #)
+
+    e.term_prob[e.t, e.fold, e.PROB[e.t, e.fold]] = (
+        (e.terms[e.d, e.t] & e.docs[e.d] & 
+         e.doc_folds[e.d, e.fold] & e.filtered_terms(e.t))
+        // (
+            e.docs[e.d] &
+            e.filtered_regions[e.d, e.i, e.j, e.k]
+        )
+    )
+    
+    e.result_mean[e.term, e.mean(e.PROB)] = (
+        e.term_prob[e.term, e.fold, e.PROB]    
+    )
+
+    e.result_std[e.term, e.std(e.PROB)] = (
+        e.term_prob[e.term, e.fold, e.PROB]
+    )
+    
+    e.result_summary_stats[
+        e.term, e.prob_mean, e.prob_std
+    ] = (
+        e.result_mean[e.term, e.prob_mean] &
+        e.result_std[e.term, e.prob_std]
+    )
+
+    res = nl.solve_all()
+
+result_summary_stats = res['result_summary_stats']._container.copy()
+thr = np.percentile(result_summary_stats['prob_mean'], 95)
+sel_terms = (
+    result_summary_stats
+    .query('prob_mean >= @thr')
+    .reset_index()
+    .term
+    .unique()
+)
+results_summary_stats_thr = (
+    result_summary_stats
+    .query('term in @sel_terms')
+    .reset_index()
+    .sort_values(['prob_mean'], ascending=False)
+)
+results_summary_stats_thr
