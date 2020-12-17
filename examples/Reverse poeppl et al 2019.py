@@ -1,11 +1,11 @@
 # ---
 # jupyter:
 #   jupytext:
-#     formats: ipynb,py:light
+#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
-#       format_name: light
-#       format_version: '1.5'
+#       format_name: percent
+#       format_version: '1.3'
 #       jupytext_version: 1.5.0
 #   kernelspec:
 #     display_name: neurolang
@@ -13,7 +13,7 @@
 #     name: neurolang
 # ---
 
-# +
+# %%
 from nilearn import datasets, image, plotting
 import numpy as np
 import nibabel as nib
@@ -113,7 +113,7 @@ for elem in regions:
     regions.drop_duplicates(inplace=True)
 
 
-# +
+# %%
 regions2 = regions.copy()
 regions2['r_number'] = regions2['r_number'] + 1000
 regions2['hemis'] = 'l'
@@ -121,7 +121,7 @@ regions['hemis'] = 'r'
 
 regions = pd.concat((regions, regions2))
 
-# +
+# %%
 wb22_l = datasets.utils._fetch_files(
     datasets.utils._get_dataset_dir('julich'),
     [
@@ -146,7 +146,7 @@ wb22_r = datasets.utils._fetch_files(
     ]
 )[0]
 
-# +
+# %%
 img_r = image.load_img(wb22_r)
 img_l = image.load_img(wb22_l)
 img_l_data = img_l.get_fdata()
@@ -162,7 +162,7 @@ for v in zip(*img_l_unmaskes):
 conc_img = nib.spatialimages.SpatialImage(img_r_data, img_r.affine)
 plotting.plot_roi(conc_img)
 
-# +
+# %%
 mni_t1 = nib.load(datasets.fetch_icbm152_2009()['t1'])
 mni_t1 = image.resample_img(mni_t1, np.eye(3) * 4)
 
@@ -176,8 +176,8 @@ conc_img_unmaskes = np.nonzero(conc_img_data)
 julich_brain = []
 for v in zip(*conc_img_unmaskes):
     julich_brain.append((v[0], v[1], v[2], conc_img_data[v[0]][v[1]][v[2]]))
-# -
 
+# %%
 cogAt = datasets.utils._fetch_files(
     datasets.utils._get_dataset_dir('CogAt'),
     [
@@ -190,7 +190,7 @@ cogAt = datasets.utils._fetch_files(
     ]
 )[0]
 
-# +
+# %%
 from neurolang.frontend import NeurolangPDL
 
 nl = NeurolangPDL()
@@ -211,7 +211,7 @@ j_regions = nl.add_tuple_set(
 #    name='dilated_ifg44'
 #)
 
-# +
+# %%
 ns_database_fn, ns_features_fn = datasets.utils._fetch_files(
     datasets.utils._get_dataset_dir('neurosynth'),
     [
@@ -273,7 +273,7 @@ subclass_of = nl.new_symbol(name=str(RDFS.subClassOf))
 label = nl.new_symbol(name=str(RDFS.label))
 hasTopConcept = nl.new_symbol(name='http://www.w3.org/2004/02/skos/core#hasTopConcept')
 
-# +
+# %%
 from typing import Iterable
 
 @nl.add_symbol
@@ -290,11 +290,10 @@ def std(iterable: Iterable) -> float:
     return np.std(iterable)
 
 
-# -
-
+# %% [markdown]
 # # Query for regions
 
-# +
+# %%
 #References:
 #['GapMap Frontal-I (GapMap)', 13],
 #['GapMap Frontal-I (GapMap)', 1013],
@@ -315,10 +314,11 @@ def std(iterable: Iterable) -> float:
 
 #['Area Id7 (Insula)',105],
 #['Area Id7 (Insula)',1105],
-# -
 
+# %% [markdown]
 # ### DMPC - GapMap Frontal-I (GapMap)
 
+# %%
 with nl.scope as e:
     
     e.ontology_terms[e.onto_name] = (
@@ -373,6 +373,7 @@ with nl.scope as e:
 
     res = nl.solve_all()
 
+# %%
 result_summary_stats = res['result_summary_stats']._container.copy()
 thr = np.percentile(result_summary_stats['prob_mean'], 95)
 sel_terms = (
@@ -390,8 +391,10 @@ results_summary_stats_thr = (
 )
 results_summary_stats_thr
 
-# ### GapMap Frontal-II (GapMap)
+# %% [markdown]
+# ### LFC - GapMap Frontal-II (GapMap)
 
+# %%
 with nl.scope as e:
     
     e.ontology_terms[e.onto_name] = (
@@ -446,6 +449,7 @@ with nl.scope as e:
 
     res = nl.solve_all()
 
+# %%
 result_summary_stats = res['result_summary_stats']._container.copy()
 thr = np.percentile(result_summary_stats['prob_mean'], 95)
 sel_terms = (
@@ -463,8 +467,10 @@ results_summary_stats_thr = (
 )
 results_summary_stats_thr
 
-# ## Area Id7 (Insula)
+# %% [markdown]
+# ## FI - Area Id7 (Insula)
 
+# %%
 with nl.scope as e:
     
     e.ontology_terms[e.onto_name] = (
@@ -519,6 +525,7 @@ with nl.scope as e:
 
     res = nl.solve_all()
 
+# %%
 result_summary_stats = res['result_summary_stats']._container.copy()
 thr = np.percentile(result_summary_stats['prob_mean'], 95)
 sel_terms = (
@@ -536,9 +543,10 @@ results_summary_stats_thr = (
 )
 results_summary_stats_thr
 
+# %% [markdown]
 # ## Amygdala 
 
-# +
+# %%
 #['CM (Amygdala)', 43],
 #['VTM (Amygdala)', 79],
 #['LB (Amygdala)', 90],
@@ -549,8 +557,8 @@ results_summary_stats_thr
 #['LB (Amygdala)', 1090],
 #['MF (Amygdala)', 1103],
 #['SF (Amygdala)', 1109],
-# -
 
+# %%
 with nl.scope as e:
     
     e.ontology_terms[e.onto_name] = (
@@ -669,6 +677,7 @@ with nl.scope as e:
 
     res = nl.solve_all()
 
+# %%
 result_summary_stats = res['result_summary_stats']._container.copy()
 thr = np.percentile(result_summary_stats['prob_mean'], 95)
 sel_terms = (
@@ -686,4 +695,4 @@ results_summary_stats_thr = (
 )
 results_summary_stats_thr
 
-
+# %%
