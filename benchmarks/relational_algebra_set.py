@@ -2,13 +2,21 @@ import numpy as np
 import pandas as pd
 from functools import reduce
 from neurolang.utils.relational_algebra_set import (
-    NamedRelationalAlgebraFrozenSet,
-    RelationalAlgebraFrozenSet,
+    pandas,
+    sql,
 )
+import sqlalchemy
 
 
-class TimeNamedRelationalAlgebraFrozenSets:
-    params = [[10 ** 4, 10 ** 5, 10 ** 6], [10], [3], [2, 8], [0.75]]
+class TimeLeftNaturalJoins:
+    params = [
+        [10 ** 4, 10 ** 5],
+        [10],
+        [3],
+        [6, 12],
+        [0.75],
+        [pandas, sql],
+    ]
 
     param_names = [
         "rows",
@@ -16,9 +24,10 @@ class TimeNamedRelationalAlgebraFrozenSets:
         "number of join columns",
         "number of chained joins",
         "ratio of dictinct elements",
+        "RAS module to test",
     ]
 
-    def setup(self, N, ncols, njoin_columns, njoins, distinct_r):
+    def setup(self, N, ncols, njoin_columns, njoins, distinct_r, module):
         """
         Generate njoins NamedRelationalAlgebraFrozenSets each with N elements
         & ncols arity. The first njoin_columns columns are identical to
@@ -38,8 +47,9 @@ class TimeNamedRelationalAlgebraFrozenSets:
             ratio of distinct elements in the set
         """
         join_columns = [hex(x) for x in range(njoin_columns)]
+        rstate = np.random.RandomState(0)
         keys = pd.DataFrame(
-            np.random.randint(0, N * distinct_r, size=(N, njoin_columns)),
+            rstate.randint(0, N * distinct_r, size=(N, njoin_columns)),
             columns=join_columns,
         )
         self.sets = []
@@ -49,7 +59,7 @@ class TimeNamedRelationalAlgebraFrozenSets:
                 [
                     keys,
                     pd.DataFrame(
-                        np.random.randint(
+                        rstate.randint(
                             0, N * distinct_r, size=(N, ncols - njoin_columns)
                         ),
                         columns=cols,
@@ -58,17 +68,25 @@ class TimeNamedRelationalAlgebraFrozenSets:
                 axis=1,
             )
             self.sets.append(
-                NamedRelationalAlgebraFrozenSet(join_columns + cols, df)
+                module.NamedRelationalAlgebraFrozenSet(join_columns + cols, df)
             )
 
     def time_ra_left_naturaljoin(
-        self, N, ncols, njoin_columns, njoins, distinct_r
+        self, N, ncols, njoin_columns, njoins, distinct_r, module
     ):
-        reduce(lambda a, b: a.left_naturaljoin(b), self.sets)
+        res = reduce(lambda a, b: a.left_naturaljoin(b), self.sets)
+        post_process_result(self.sets, res)
 
 
 class TimeChainedNaturalJoins:
-    params = [[10 ** 4, 10 ** 5, 10 ** 6], [10], [3], [8], [0.75]]
+    params = [
+        [10 ** 4, 10 ** 5],
+        [10],
+        [3],
+        [6, 12],
+        [0.75],
+        [pandas, sql],
+    ]
 
     param_names = [
         "rows",
@@ -76,11 +94,12 @@ class TimeChainedNaturalJoins:
         "number of join columns",
         "number of chained joins",
         "ratio of dictinct elements",
+        "RAS module to test",
     ]
 
-    timeout = 60 * 3
+    # timeout = 60 * 3
 
-    def setup(self, N, ncols, njoin_columns, njoins, distinct_r):
+    def setup(self, N, ncols, njoin_columns, njoins, distinct_r, module):
         """
         Generate NamedRelationalAlgebraFrozenSets to test performance impact
         of chain order on natural joins. All sets share the same key columns,
@@ -104,14 +123,15 @@ class TimeChainedNaturalJoins:
             ratio of distinct elements in the sets
         """
         join_columns = [hex(x) for x in range(njoin_columns)]
+        rstate = np.random.RandomState(0)
         keys = pd.DataFrame(
-            np.random.randint(0, N * distinct_r, size=(N, njoin_columns)),
+            rstate.randint(0, N * distinct_r, size=(N, njoin_columns)),
             columns=join_columns,
         )
         self.sets = []
         for i in range(njoins):
             # Take a sample of the default keys.
-            skeys = keys.sample(frac=1 / (i + 1))
+            skeys = keys.sample(frac=1 / (i + 1), random_state=rstate)
             skeys = pd.DataFrame(
                 np.tile(skeys.to_numpy(), (njoins - i, 1)),
                 columns=join_columns,
@@ -122,7 +142,7 @@ class TimeChainedNaturalJoins:
                 [
                     skeys,
                     pd.DataFrame(
-                        np.random.randint(
+                        rstate.randint(
                             0,
                             N * distinct_r,
                             size=(skeys.shape[0], ncols - njoin_columns),
@@ -133,22 +153,31 @@ class TimeChainedNaturalJoins:
                 axis=1,
             )
             self.sets.append(
-                NamedRelationalAlgebraFrozenSet(join_columns + cols, df)
+                module.NamedRelationalAlgebraFrozenSet(join_columns + cols, df)
             )
 
     def time_ra_naturaljoin_hard(
-        self, N, ncols, njoin_columns, njoins, distinct_r
+        self, N, ncols, njoin_columns, njoins, distinct_r, module
     ):
-        reduce(lambda a, b: a.naturaljoin(b), self.sets)
+        res = reduce(lambda a, b: a.naturaljoin(b), self.sets)
+        post_process_result(self.sets, res)
 
     def time_ra_naturaljoin_easy(
-        self, N, ncols, njoin_columns, njoins, distinct_r
+        self, N, ncols, njoin_columns, njoins, distinct_r, module
     ):
-        reduce(lambda a, b: a.naturaljoin(b), self.sets[::-1])
+        res = reduce(lambda a, b: a.naturaljoin(b), self.sets[::-1])
+        post_process_result(self.sets, res)
 
 
-class TimeRelationalAlgebraFrozenSets:
-    params = [[10 ** 4, 10 ** 5, 10 ** 6], [10], [3], [2, 8], [0.75]]
+class TimeEquiJoin:
+    params = [
+        [10 ** 4, 10 ** 5],
+        [10],
+        [3],
+        [6, 12],
+        [0.75],
+        [pandas, sql],
+    ]
 
     param_names = [
         "rows",
@@ -156,9 +185,10 @@ class TimeRelationalAlgebraFrozenSets:
         "number of join columns",
         "number of chained joins",
         "ratio of dictinct elements",
+        "RAS module to test",
     ]
 
-    def setup(self, N, ncols, njoin_columns, njoins, distinct_r):
+    def setup(self, N, ncols, njoin_columns, njoins, distinct_r, module):
         """
         Generate njoins RelationalAlgebraFrozenSets each with N elements
         & ncols arity. The first njoin_columns columns are identical to
@@ -177,24 +207,46 @@ class TimeRelationalAlgebraFrozenSets:
         distinct_r: int
             ratio of distinct elements in the set
         """
+        rstate = np.random.RandomState(0)
         df1 = pd.DataFrame(
-            np.random.randint(0, N * distinct_r, size=(N, njoin_columns))
+            rstate.randint(0, N * distinct_r, size=(N, njoin_columns))
         )
         self.sets = []
         for _ in range(njoins):
             df = pd.DataFrame(
-                np.random.randint(
+                rstate.randint(
                     0, N * distinct_r, size=(N, ncols - njoin_columns)
                 ),
             )
             self.sets.append(
-                RelationalAlgebraFrozenSet(
+                module.RelationalAlgebraFrozenSet(
                     pd.concat([df1, df], axis=1, ignore_index=True)
                 )
             )
 
-    def time_ra_equijoin(self, N, ncols, njoin_columns, njoins, distinct_r):
-        reduce(
+    def time_ra_equijoin(
+        self, N, ncols, njoin_columns, njoins, distinct_r, module
+    ):
+        res = reduce(
             lambda a, b: a.equijoin(b, [(i, i) for i in range(njoin_columns)]),
             self.sets,
         )
+        post_process_result(self.sets, res)
+
+
+def post_process_result(sets, result):
+    if isinstance(result, sql.RelationalAlgebraFrozenSet):
+        # Fetch the results from the view to execute the join query
+        query = sqlalchemy.select(result._table.c).select_from(result._table)
+        with sql.SQLAEngineFactory.get_engine().connect() as conn:
+            conn.execute(query).fetchall()
+
+        # Analyze the query plan
+        qp = "EXPLAIN QUERY PLAN %s" % (str(query))
+        with sql.SQLAEngineFactory.get_engine().connect() as conn:
+            eqp = conn.execute(qp).fetchall()
+            for i, s in enumerate(sets):
+                print("s{} : {}".format(i, s._table_name))
+            print("SQL Query Plan: ")
+            for r in eqp:
+                print(r)
