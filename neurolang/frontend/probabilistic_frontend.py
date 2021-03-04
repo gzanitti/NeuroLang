@@ -23,8 +23,8 @@ from uuid import uuid1
 import pandas as pd
 
 from .. import expressions as ir
+from ..datalog.chase import Chase
 from ..datalog.aggregation import (
-    Chase,
     DatalogWithAggregationMixin,
     TranslateToLogicWithAggregation,
 )
@@ -367,7 +367,6 @@ class NeurolangPDL(QueryBuilderDatalog):
     def _solve_deterministic_stratum(self, det_idb):
         if "__constraints__" in self.symbol_table:
             eB = self._rewrite_program_with_ontology(det_idb)
-            det_idb = Union(det_idb.formulas + eB.formulas)
         chase = self.chase_class(self.program_ir, rules=det_idb)
         solution = chase.build_chase_solution()
         return solution
